@@ -1,4 +1,4 @@
-package com.jobson.market.auth_service;
+package com.jobson.market.auth;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
