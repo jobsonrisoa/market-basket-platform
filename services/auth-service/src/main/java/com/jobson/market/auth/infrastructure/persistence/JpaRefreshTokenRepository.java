@@ -1,6 +1,6 @@
 package com.jobson.market.auth.infrastructure.persistence;
 
-import com.jobson.market.auth.application.port.RefreshTokenRepository;
+import com.jobson.market.auth.application.port.token.RefreshTokenRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;

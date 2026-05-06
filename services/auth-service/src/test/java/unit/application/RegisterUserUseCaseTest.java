@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.jobson.market.auth.application.port.OutboxEventRepository;
-import com.jobson.market.auth.application.port.PasswordCredentialRepository;
-import com.jobson.market.auth.application.port.PasswordHasher;
-import com.jobson.market.auth.application.port.UserRepository;
+import com.jobson.market.auth.application.port.crypto.PasswordHasher;
+import com.jobson.market.auth.application.port.event.OutboxEventRepository;
+import com.jobson.market.auth.application.port.identity.PasswordCredentialRepository;
+import com.jobson.market.auth.application.port.identity.UserRepository;
 import com.jobson.market.auth.application.usecase.DuplicateEmailException;
 import com.jobson.market.auth.application.usecase.RegisterUserCommand;
 import com.jobson.market.auth.application.usecase.RegisterUserResult;

@@ -1,10 +1,10 @@
 package com.jobson.market.auth.application.service;
 
-import com.jobson.market.auth.application.port.AccessTokenIssuer;
-import com.jobson.market.auth.application.port.OutboxEventRepository;
-import com.jobson.market.auth.application.port.RefreshTokenCodec;
-import com.jobson.market.auth.application.port.RefreshTokenRepository;
-import com.jobson.market.auth.application.port.UserRepository;
+import com.jobson.market.auth.application.port.crypto.RefreshTokenCodec;
+import com.jobson.market.auth.application.port.event.OutboxEventRepository;
+import com.jobson.market.auth.application.port.identity.UserRepository;
+import com.jobson.market.auth.application.port.token.AccessTokenIssuer;
+import com.jobson.market.auth.application.port.token.RefreshTokenRepository;
 import com.jobson.market.auth.application.usecase.InvalidRefreshTokenException;
 import com.jobson.market.auth.domain.event.OutboxEvent;
 import com.jobson.market.auth.domain.model.AuthTokens;

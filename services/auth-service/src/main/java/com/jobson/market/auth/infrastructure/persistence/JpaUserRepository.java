@@ -1,6 +1,6 @@
 package com.jobson.market.auth.infrastructure.persistence;
 
-import com.jobson.market.auth.application.port.UserRepository;
+import com.jobson.market.auth.application.port.identity.UserRepository;
 import com.jobson.market.auth.domain.model.Email;
 import com.jobson.market.auth.domain.model.User;
 import java.time.Clock;

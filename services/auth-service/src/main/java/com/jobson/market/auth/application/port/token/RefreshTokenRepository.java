@@ -1,4 +1,4 @@
-package com.jobson.market.auth.application.port;
+package com.jobson.market.auth.application.port.token;
 
 import java.time.Instant;
 import java.util.List;

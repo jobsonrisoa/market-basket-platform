@@ -1,4 +1,4 @@
-package com.jobson.market.auth.application.port;
+package com.jobson.market.auth.application.port.crypto;
 
 import com.jobson.market.auth.domain.model.Password;
 

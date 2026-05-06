@@ -1,4 +1,4 @@
-package com.jobson.market.auth.application.port;
+package com.jobson.market.auth.application.port.token;
 
 import com.jobson.market.auth.domain.model.AuthTokens;
 import com.jobson.market.auth.domain.model.User;

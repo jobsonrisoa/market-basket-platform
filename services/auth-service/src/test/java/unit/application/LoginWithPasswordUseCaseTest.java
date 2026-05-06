@@ -3,11 +3,11 @@ package unit.application;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.jobson.market.auth.application.port.OutboxEventRepository;
-import com.jobson.market.auth.application.port.PasswordCredentialRepository;
-import com.jobson.market.auth.application.port.PasswordVerifier;
-import com.jobson.market.auth.application.port.TokenIssuer;
-import com.jobson.market.auth.application.port.UserRepository;
+import com.jobson.market.auth.application.port.crypto.PasswordVerifier;
+import com.jobson.market.auth.application.port.event.OutboxEventRepository;
+import com.jobson.market.auth.application.port.identity.PasswordCredentialRepository;
+import com.jobson.market.auth.application.port.identity.UserRepository;
+import com.jobson.market.auth.application.port.token.TokenIssuer;
 import com.jobson.market.auth.application.usecase.InvalidCredentialsException;
 import com.jobson.market.auth.application.usecase.LoginWithPasswordCommand;
 import com.jobson.market.auth.application.usecase.LoginWithPasswordResult;

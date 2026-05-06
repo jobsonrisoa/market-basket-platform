@@ -1,6 +1,6 @@
 package com.jobson.market.auth.infrastructure.crypto;
 
-import com.jobson.market.auth.application.port.RefreshTokenCodec;
+import com.jobson.market.auth.application.port.crypto.RefreshTokenCodec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

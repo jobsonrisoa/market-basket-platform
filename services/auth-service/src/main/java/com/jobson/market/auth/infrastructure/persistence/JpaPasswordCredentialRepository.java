@@ -1,6 +1,6 @@
 package com.jobson.market.auth.infrastructure.persistence;
 
-import com.jobson.market.auth.application.port.PasswordCredentialRepository;
+import com.jobson.market.auth.application.port.identity.PasswordCredentialRepository;
 import java.time.Clock;
 import java.util.Optional;
 import java.util.UUID;

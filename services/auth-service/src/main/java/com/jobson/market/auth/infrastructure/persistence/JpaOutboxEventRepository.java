@@ -1,6 +1,6 @@
 package com.jobson.market.auth.infrastructure.persistence;
 
-import com.jobson.market.auth.application.port.OutboxEventRepository;
+import com.jobson.market.auth.application.port.event.OutboxEventRepository;
 import com.jobson.market.auth.domain.event.OutboxEvent;
 import org.springframework.stereotype.Repository;
 

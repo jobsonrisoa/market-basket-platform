@@ -1,4 +1,4 @@
-package com.jobson.market.auth.application.port;
+package com.jobson.market.auth.application.port.identity;
 
 import java.util.Optional;
 import java.util.UUID;

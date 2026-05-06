@@ -1,4 +1,4 @@
-package com.jobson.market.auth.application.port;
+package com.jobson.market.auth.application.port.identity;
 
 import com.jobson.market.auth.domain.model.Email;
 import com.jobson.market.auth.domain.model.User;

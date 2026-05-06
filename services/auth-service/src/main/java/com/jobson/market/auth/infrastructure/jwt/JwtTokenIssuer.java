@@ -1,7 +1,7 @@
 package com.jobson.market.auth.infrastructure.jwt;
 
-import com.jobson.market.auth.application.port.AccessTokenIssuer;
-import com.jobson.market.auth.application.port.TokenIssuer;
+import com.jobson.market.auth.application.port.token.AccessTokenIssuer;
+import com.jobson.market.auth.application.port.token.TokenIssuer;
 import com.jobson.market.auth.application.service.RefreshTokenService;
 import com.jobson.market.auth.domain.model.AuthTokens;
 import com.jobson.market.auth.domain.model.User;
