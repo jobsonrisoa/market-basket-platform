@@ -34,7 +34,8 @@ class SecurityConfiguration {
                         "/.well-known/jwks.json",
                         "/oauth2/**",
                         "/login/oauth2/**",
-                        "/actuator/health")
+                        "/actuator/health",
+                        "/actuator/prometheus")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

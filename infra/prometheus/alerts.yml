@@ -1,0 +1,48 @@
+groups:
+  - name: market-services
+    rules:
+      - alert: MarketServiceDown
+        expr: up{job="market-services"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} is down"
+          description: "Prometheus has not scraped {{ $labels.instance }} successfully for at least 1 minute."
+
+      - alert: MarketServiceHighErrorRate
+        expr: |
+          sum by (instance) (rate(http_server_requests_seconds_count{job="market-services",status=~"5.."}[5m]))
+            /
+          sum by (instance) (rate(http_server_requests_seconds_count{job="market-services"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} has elevated 5xx responses"
+          description: "More than 5% of HTTP requests have returned 5xx responses for 5 minutes."
+
+      - alert: MarketServiceHighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (instance, le) (rate(http_server_requests_seconds_bucket{job="market-services"}[5m]))
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} p95 latency is high"
+          description: "HTTP p95 latency has been above 1 second for 5 minutes."
+
+      - alert: MarketServiceHighHeapUsage
+        expr: |
+          sum by (instance) (jvm_memory_used_bytes{job="market-services",area="heap"})
+            /
+          sum by (instance) (jvm_memory_max_bytes{job="market-services",area="heap"}) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} heap usage is high"
+          description: "JVM heap usage has been above 85% for 10 minutes."

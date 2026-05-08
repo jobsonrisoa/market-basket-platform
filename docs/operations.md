@@ -9,7 +9,18 @@ Common service dependencies:
 - PostgreSQL: service-owned databases under one local PostgreSQL instance.
 - Redis: available to every service.
 - Kafka: available to every service.
-- Prometheus and Grafana: provisioned for observability.
+- Prometheus: scrapes service Actuator metrics from `infra/prometheus/prometheus.yml`.
+- Grafana: provisioned with a Prometheus datasource and the `Market Services` dashboard.
+- Sentry: optional error and tracing sink configured by environment variables.
+
+Observability environment variables:
+
+- `SENTRY_DSN`: enables Sentry when set. Leave empty for local development without Sentry.
+- `SENTRY_ENVIRONMENT`: logical environment name, defaults to `local`.
+- `SENTRY_RELEASE`: release identifier, defaults to `market-basket-platform@local` in Compose.
+- `SENTRY_TRACES_SAMPLE_RATE`: distributed tracing sample rate, defaults to `0.0`.
+- `GRAFANA_ADMIN_USER`: local Grafana admin user, defaults to `admin`.
+- `GRAFANA_ADMIN_PASSWORD`: local Grafana admin password, defaults to `admin`.
 
 ## Health Checks
 
@@ -36,7 +47,62 @@ Application configuration exposes:
 health,info,metrics,prometheus
 ```
 
-Prometheus is available on `localhost:9090`, but scrape configuration is not yet committed. Add a Prometheus configuration before relying on dashboards or alerts.
+Prometheus is available at:
+
+```text
+http://localhost:9090
+```
+
+Prometheus scrapes every service at `/actuator/prometheus` through Docker Compose DNS. The scrape targets are defined in `infra/prometheus/prometheus.yml`.
+
+Useful local checks:
+
+```bash
+curl http://localhost:8080/actuator/prometheus
+curl http://localhost:9090/-/ready
+```
+
+## Dashboards
+
+Grafana is available at:
+
+```text
+http://localhost:3000
+```
+
+Default local credentials are `admin` / `admin` unless overridden. Grafana provisions:
+
+- Datasource: `Prometheus`
+- Dashboard folder: `Market Basket`
+- Dashboard: `Market Services`
+
+## Alerts
+
+Prometheus alert rules live in `infra/prometheus/alerts.yml`.
+
+Current local alerts:
+
+- `MarketServiceDown`: a service cannot be scraped for at least 1 minute.
+- `MarketServiceHighErrorRate`: more than 5% of HTTP responses are 5xx for 5 minutes.
+- `MarketServiceHighLatencyP95`: HTTP p95 latency is above 1 second for 5 minutes.
+- `MarketServiceHighHeapUsage`: JVM heap usage is above 85% for 10 minutes.
+
+No Alertmanager service is configured yet, so alerts are visible in Prometheus but are not routed to email, Slack, PagerDuty, or Sentry.
+
+## Error Tracking
+
+Sentry is wired into every Spring service through `sentry-spring-boot-starter-jakarta`. It is disabled by default because `SENTRY_DSN` is empty in local Compose.
+
+To enable it locally or in an environment file:
+
+```bash
+SENTRY_DSN=https://examplePublicKey@o0.ingest.sentry.io/0
+SENTRY_ENVIRONMENT=staging
+SENTRY_RELEASE=market-basket-platform@<git-sha>
+SENTRY_TRACES_SAMPLE_RATE=0.1
+```
+
+Keep `SENTRY_TRACES_SAMPLE_RATE` low in production until baseline traffic and cost are understood.
 
 ## Logs
 
@@ -47,6 +113,8 @@ docker compose logs -f auth-service
 ```
 
 Deployment host logs use the same Compose command from the deployed repository path.
+
+Centralized log aggregation is not configured yet. Prefer structured JSON logs before adding Loki, OpenSearch, or another log backend.
 
 ## Runbook: Service Fails To Start
 
@@ -71,6 +139,21 @@ Deployment host logs use the same Compose command from the deployed repository p
 3. From the host, local tools should use `localhost:9092`.
 4. Check Kafka health with `docker compose ps kafka`.
 
+## Runbook: Missing Prometheus Target
+
+1. Open `http://localhost:9090/targets`.
+2. Confirm the target hostname and port match `infra/prometheus/prometheus.yml`.
+3. Confirm the service is running with `docker compose ps <service>`.
+4. Confirm the metrics endpoint responds from the host, for example `curl http://localhost:8080/actuator/prometheus`.
+5. Check service logs for Actuator, security, or startup errors.
+
+## Runbook: Grafana Dashboard Has No Data
+
+1. Confirm Prometheus is healthy at `http://localhost:9090/-/ready`.
+2. Confirm targets are up at `http://localhost:9090/targets`.
+3. In Grafana, confirm the `Prometheus` datasource points to `http://prometheus:9090`.
+4. Confirm services were rebuilt after adding `micrometer-registry-prometheus`.
+
 ## Security Operations
 
 - Treat JWT signing configuration as sensitive production configuration.
@@ -79,6 +162,7 @@ Deployment host logs use the same Compose command from the deployed repository p
 - Keep access-token TTL short. The default is 15 minutes.
 - Do not log passwords, refresh tokens, access tokens, or OAuth provider credentials.
 - Use environment-specific OAuth2 client credentials outside source control.
+- Keep Sentry DSNs and auth tokens outside source control.
 
 ## Backup And Recovery
 
@@ -92,11 +176,11 @@ Production should define backups for PostgreSQL data volumes before handling rea
 ## Production Readiness Checklist
 
 - Replace `ddl-auto=update` with a migration tool such as Flyway or Liquibase.
-- Define Prometheus scrape configuration and alert rules.
-- Add dashboard definitions for service latency, error rate, JVM, database, Kafka, and Redis health.
+- Route Prometheus alerts through Alertmanager.
+- Add dashboard definitions for database, Kafka, and Redis health.
 - Pin production Compose deployments to immutable image tags.
 - Add HTTPS and an ingress or API gateway.
-- Add centralized logs.
+- Add centralized structured logs.
 - Add secret management outside plain environment files.
 - Add rate limiting for auth endpoints.
 - Add smoke tests after deployment.
