@@ -91,7 +91,7 @@ No Alertmanager service is configured yet, so alerts are visible in Prometheus b
 
 ## Error Tracking
 
-Sentry is wired into every Spring service through `sentry-spring-boot-starter-jakarta`. It is disabled by default because `SENTRY_DSN` is empty in local Compose.
+Sentry is wired into every Spring service through `sentry-spring-boot-4-starter`. It is disabled by default because `SENTRY_DSN` is empty in local Compose.
 
 To enable it locally or in an environment file:
 

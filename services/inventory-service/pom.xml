@@ -60,8 +60,8 @@
 		</dependency>
 		<dependency>
 			<groupId>io.sentry</groupId>
-			<artifactId>sentry-spring-boot-starter-jakarta</artifactId>
-			<version>8.21.1</version>
+			<artifactId>sentry-spring-boot-4-starter</artifactId>
+			<version>8.39.1</version>
 		</dependency>
 
 		<dependency>
