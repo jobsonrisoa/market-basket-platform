@@ -282,7 +282,22 @@ services:
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
 
+  sonarqube:
+    image: sonarqube:community
+    container_name: market-sonarqube
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+
 volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:

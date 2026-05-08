@@ -9,10 +9,12 @@ import com.jobson.market.auth.application.port.identity.UserRepository;
 import com.jobson.market.auth.application.usecase.AdminUserManagementUseCase;
 import com.jobson.market.auth.application.usecase.AssignRoleCommand;
 import com.jobson.market.auth.application.usecase.ForbiddenUserManagementException;
+import com.jobson.market.auth.application.usecase.RemoveRoleCommand;
 import com.jobson.market.auth.domain.event.OutboxEvent;
 import com.jobson.market.auth.domain.model.Email;
 import com.jobson.market.auth.domain.model.Role;
 import com.jobson.market.auth.domain.model.User;
+import com.jobson.market.auth.domain.model.UserStatus;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -52,6 +54,38 @@ class AdminUserManagementUseCaseTest {
         () -> useCase.assignRole(new AssignRoleCommand(actor.id(), target.id(), Role.ADMIN)));
 
     assertTrue(outbox.events.isEmpty());
+  }
+
+  @Test
+  void shouldAllowAdminToRemoveRole() {
+    User admin = User.admin(new Email("admin@example.com"));
+    User target = User.register(new Email("target@example.com")).assignRole(Role.ADMIN);
+    FakeOutboxEventRepository outbox = new FakeOutboxEventRepository();
+    AdminUserManagementUseCase useCase =
+        new AdminUserManagementUseCase(new FakeUserRepository(admin, target), outbox);
+
+    User updated = useCase.removeRole(new RemoveRoleCommand(admin.id(), target.id(), Role.ADMIN));
+
+    assertTrue(updated.roles().contains(Role.CUSTOMER));
+    assertTrue(updated.roles().stream().noneMatch(Role.ADMIN::equals));
+    assertEquals("auth.user.role_removed.v1", outbox.events.get(0).eventType());
+  }
+
+  @Test
+  void shouldAllowAdminToSuspendAndReactivateUser() {
+    User admin = User.admin(new Email("admin@example.com"));
+    User target = User.register(new Email("target@example.com")).verifyEmail();
+    FakeOutboxEventRepository outbox = new FakeOutboxEventRepository();
+    AdminUserManagementUseCase useCase =
+        new AdminUserManagementUseCase(new FakeUserRepository(admin, target), outbox);
+
+    User suspended = useCase.suspend(admin.id(), target.id());
+    User reactivated = useCase.reactivate(admin.id(), target.id());
+
+    assertEquals(UserStatus.SUSPENDED, suspended.status());
+    assertEquals(UserStatus.ACTIVE, reactivated.status());
+    assertEquals("auth.user.account_suspended.v1", outbox.events.get(0).eventType());
+    assertEquals("auth.user.account_reactivated.v1", outbox.events.get(1).eventType());
   }
 
   private static class FakeUserRepository implements UserRepository {
