@@ -56,6 +56,11 @@ class JwtTokenIssuer implements TokenIssuer, AccessTokenIssuer {
             .subject(user.id().toString())
             .claim("email", user.email().value())
             .claim("email_verified", user.emailVerified())
+            .claim("roles", user.roles().stream().map(Enum::name).toList())
+            .claim("account_profile", user.accountProfile().name())
+            .claim(
+                "customer_profile_type",
+                user.customerProfileType() == null ? null : user.customerProfileType().name())
             .claim("scope", "auth:user")
             .build();
     JwsHeader headers =

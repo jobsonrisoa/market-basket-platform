@@ -87,6 +87,29 @@ class LoginWithPasswordUseCaseTest {
     assertEquals("auth.session.login_failed.v1", outbox.events.get(0).eventType());
   }
 
+  @Test
+  void shouldRejectSuspendedUserWithoutIssuingToken() {
+    User user =
+        new User(UUID.randomUUID(), new Email("john@example.com"), true, UserStatus.SUSPENDED);
+    FakeOutboxEventRepository outbox = new FakeOutboxEventRepository();
+    FakeTokenIssuer tokenIssuer = new FakeTokenIssuer();
+    LoginWithPasswordUseCase useCase =
+        new LoginWithPasswordUseCase(
+            new FakeUserRepository(Optional.of(user)),
+            new FakePasswordCredentialRepository(Optional.of("hashed-password")),
+            new MatchingPasswordVerifier(),
+            tokenIssuer,
+            outbox);
+
+    assertThrows(
+        InvalidCredentialsException.class,
+        () -> useCase.login(new LoginWithPasswordCommand("john@example.com", "Str0ng-password!")));
+
+    assertEquals(0, tokenIssuer.issuedTokens);
+    assertEquals(1, outbox.events.size());
+    assertEquals("auth.session.login_failed.v1", outbox.events.get(0).eventType());
+  }
+
   private static class FakeUserRepository implements UserRepository {
     private final Optional<User> user;
 

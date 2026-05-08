@@ -46,6 +46,11 @@ public class LoginWithPasswordUseCase {
     }
 
     User foundUser = user.orElseThrow();
+    if (!foundUser.canLogin()) {
+      outbox.save(OutboxEvent.loginFailed(email));
+      throw new InvalidCredentialsException();
+    }
+
     String passwordHash =
         credentials
             .findPasswordHashByUserId(foundUser.id())

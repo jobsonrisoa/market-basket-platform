@@ -4,5 +4,6 @@ public enum UserStatus {
   PENDING_EMAIL_VERIFICATION,
   ACTIVE,
   LOCKED,
+  SUSPENDED,
   DISABLED
 }

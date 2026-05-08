@@ -41,6 +41,6 @@ public class RegisterUserUseCase {
     credentials.save(user.id(), passwordHasher.hash(password));
     outbox.save(OutboxEvent.userRegistered(user));
 
-    return new RegisterUserResult(user.id(), user.email().value());
+    return new RegisterUserResult(user.id(), user.email().value(), user.roles());
   }
 }

@@ -16,6 +16,7 @@ import com.jobson.market.auth.application.usecase.RegisterUserUseCase;
 import com.jobson.market.auth.domain.event.OutboxEvent;
 import com.jobson.market.auth.domain.model.Email;
 import com.jobson.market.auth.domain.model.Password;
+import com.jobson.market.auth.domain.model.Role;
 import com.jobson.market.auth.domain.model.User;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +38,7 @@ class RegisterUserUseCaseTest {
         useCase.register(new RegisterUserCommand("John@Example.COM", "Str0ng-password!"));
 
     assertEquals("john@example.com", result.email());
+    assertTrue(result.roles().contains(Role.CUSTOMER));
     assertTrue(users.savedUser.isPresent());
     assertEquals(result.userId(), users.savedUser.orElseThrow().id());
     assertTrue(credentials.savedCredential.isPresent());

@@ -1,8 +1,10 @@
 package com.jobson.market.auth.infrastructure.web;
 
 import com.jobson.market.auth.application.usecase.DuplicateEmailException;
+import com.jobson.market.auth.application.usecase.ForbiddenUserManagementException;
 import com.jobson.market.auth.application.usecase.InvalidCredentialsException;
 import com.jobson.market.auth.application.usecase.InvalidRefreshTokenException;
+import com.jobson.market.auth.application.usecase.UserNotFoundException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +25,16 @@ class AuthExceptionHandler {
   ResponseEntity<Map<String, String>> unauthorized() {
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
         .body(Map.of("error", "Invalid credentials"));
+  }
+
+  @ExceptionHandler(ForbiddenUserManagementException.class)
+  ResponseEntity<Map<String, String>> forbidden() {
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Forbidden"));
+  }
+
+  @ExceptionHandler(UserNotFoundException.class)
+  ResponseEntity<Map<String, String>> notFound() {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "User not found"));
   }
 
   @ExceptionHandler({IllegalArgumentException.class, MethodArgumentNotValidException.class})

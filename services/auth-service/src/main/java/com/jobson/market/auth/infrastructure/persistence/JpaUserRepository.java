@@ -47,12 +47,21 @@ class JpaUserRepository implements UserRepository {
                 user.email().value(),
                 user.emailVerified(),
                 user.status(),
+                user.roles(),
+                user.accountProfile(),
+                user.customerProfileType(),
                 createdAt,
                 now)));
   }
 
   private User toDomain(UserEntity entity) {
     return new User(
-        entity.id(), new Email(entity.email()), entity.emailVerified(), entity.status());
+        entity.id(),
+        new Email(entity.email()),
+        entity.emailVerified(),
+        entity.status(),
+        entity.roles(),
+        entity.accountProfile(),
+        entity.customerProfileType());
   }
 }

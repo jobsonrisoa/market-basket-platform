@@ -10,6 +10,7 @@ import com.jobson.market.auth.application.port.identity.UserRepository;
 import com.jobson.market.auth.application.port.token.RefreshTokenRepository;
 import com.jobson.market.auth.application.port.token.TokenIssuer;
 import com.jobson.market.auth.application.service.RefreshTokenService;
+import com.jobson.market.auth.application.usecase.AdminUserManagementUseCase;
 import com.jobson.market.auth.application.usecase.GoogleLoginUseCase;
 import com.jobson.market.auth.application.usecase.LoginWithPasswordUseCase;
 import com.jobson.market.auth.application.usecase.LogoutUseCase;
@@ -58,6 +59,12 @@ class AuthUseCaseConfiguration {
       TokenIssuer tokenIssuer,
       OutboxEventRepository outbox) {
     return new LoginWithPasswordUseCase(users, credentials, passwordVerifier, tokenIssuer, outbox);
+  }
+
+  @Bean
+  AdminUserManagementUseCase adminUserManagementUseCase(
+      UserRepository users, OutboxEventRepository outbox) {
+    return new AdminUserManagementUseCase(users, outbox);
   }
 
   @Bean
