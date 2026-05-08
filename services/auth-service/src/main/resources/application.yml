@@ -1,38 +1,38 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
     name: auth-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/market_auth
-    username: market
-    password: market
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/market_auth}
+    username: ${SPRING_DATASOURCE_USERNAME:market}
+    password: ${SPRING_DATASOURCE_PASSWORD:market}
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     open-in-view: false
-    show-sql: true
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
   data:
     redis.repositories.enabled: false
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
 auth:
   jwt:
-    issuer: http://localhost:8080
-    audience: market-basket-platform
-    access-token-ttl: 15m
-    key-id: local-dev-key
+    issuer: ${AUTH_JWT_ISSUER:http://localhost:8080}
+    audience: ${AUTH_JWT_AUDIENCE:market-basket-platform}
+    access-token-ttl: ${AUTH_JWT_ACCESS_TOKEN_TTL:15m}
+    key-id: ${AUTH_JWT_KEY_ID:local-dev-key}
   refresh-token:
-    ttl: 30d
+    ttl: ${AUTH_REFRESH_TOKEN_TTL:30d}
 
 management:
   endpoints:

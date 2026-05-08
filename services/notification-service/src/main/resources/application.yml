@@ -1,28 +1,28 @@
 server:
-  port: 8086
+  port: ${SERVER_PORT:8086}
 
 spring:
   application:
     name: notification-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/market_notification
-    username: market
-    password: market
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/market_notification}
+    username: ${SPRING_DATASOURCE_USERNAME:market}
+    password: ${SPRING_DATASOURCE_PASSWORD:market}
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
     open-in-view: false
-    show-sql: true
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
 
 management:
   endpoints:

@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  service-build:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: auth-service
+            path: services/auth-service
+          - service: customer-service
+            path: services/customer-service
+          - service: catalog-service
+            path: services/catalog-service
+          - service: subscription-service
+            path: services/subscription-service
+          - service: order-service
+            path: services/order-service
+          - service: inventory-service
+            path: services/inventory-service
+          - service: notification-service
+            path: services/notification-service
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+          cache-dependency-path: ${{ matrix.path }}/pom.xml
+
+      - name: Make Maven wrapper executable
+        run: chmod +x mvnw
+        working-directory: ${{ matrix.path }}
+
+      - name: Check formatting
+        run: ./mvnw -B -ntp spotless:check
+        working-directory: ${{ matrix.path }}
+
+      - name: Test and package
+        run: ./mvnw -B -ntp package
+        working-directory: ${{ matrix.path }}
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-test-reports
+          path: ${{ matrix.path }}/target/surefire-reports/
+          if-no-files-found: ignore
+
+      - name: Upload service jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-jar
+          path: ${{ matrix.path }}/target/*.jar
+          if-no-files-found: error
