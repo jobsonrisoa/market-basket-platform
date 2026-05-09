@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.jobson.market.auth.domain.model.AccountProfile;
 import com.jobson.market.auth.domain.model.CustomerProfileType;
 import com.jobson.market.auth.domain.model.Email;
+import com.jobson.market.auth.domain.model.Permission;
 import com.jobson.market.auth.domain.model.Role;
 import com.jobson.market.auth.domain.model.User;
 import com.jobson.market.auth.domain.model.UserStatus;
@@ -51,7 +52,7 @@ class UserTest {
     User admin = User.admin(new Email("admin@example.com"));
 
     assertTrue(admin.roles().contains(Role.ADMIN));
-    assertEquals(AccountProfile.ADMIN, admin.accountProfile());
+    assertEquals(AccountProfile.PLATFORM, admin.accountProfile());
     assertEquals(UserStatus.ACTIVE, admin.status());
   }
 
@@ -63,7 +64,30 @@ class UserTest {
 
     assertTrue(adminUser.roles().contains(Role.CUSTOMER));
     assertTrue(adminUser.roles().contains(Role.ADMIN));
-    assertEquals(AccountProfile.ADMIN, adminUser.accountProfile());
+    assertEquals(AccountProfile.PLATFORM, adminUser.accountProfile());
+    assertTrue(adminUser.permissions().contains(Permission.AUTH_USER_ROLE_ASSIGN));
+  }
+
+  @Test
+  void shouldMapSellerRolesToSellerProfileAndPermissions() {
+    User user = User.register(new Email("seller@example.com"));
+
+    User seller = user.assignRole(Role.SELLER_OWNER);
+
+    assertTrue(seller.roles().contains(Role.CUSTOMER));
+    assertTrue(seller.roles().contains(Role.SELLER_OWNER));
+    assertEquals(AccountProfile.SELLER, seller.accountProfile());
+    assertTrue(seller.permissions().contains(Permission.SELLER_CATALOG_MANAGE));
+    assertTrue(seller.permissions().contains(Permission.SELLER_STAFF_MANAGE));
+  }
+
+  @Test
+  void shouldCreateSuperAdminProfile() {
+    User user = User.superAdmin(new Email("owner@example.com"));
+
+    assertTrue(user.roles().contains(Role.SUPER_ADMIN));
+    assertEquals(AccountProfile.PLATFORM, user.accountProfile());
+    assertTrue(user.permissions().contains(Permission.AUTH_USER_ROLE_REVOKE));
   }
 
   @Test

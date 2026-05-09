@@ -105,8 +105,8 @@ public record OutboxEvent(
   private static OutboxEvent userRoleChanged(
       User user, Role role, UUID changedBy, String eventType) {
     String payload =
-        "{\"userId\":\"%s\",\"role\":\"%s\",\"changedBy\":\"%s\"}"
-            .formatted(user.id(), role, changedBy);
+        "{\"userId\":\"%s\",\"role\":\"%s\",\"accountProfile\":\"%s\",\"changedBy\":\"%s\"}"
+            .formatted(user.id(), role, user.accountProfile(), changedBy);
     return new OutboxEvent(
         UUID.randomUUID(),
         user.id().toString(),

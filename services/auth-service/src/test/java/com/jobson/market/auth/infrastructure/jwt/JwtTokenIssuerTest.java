@@ -41,6 +41,9 @@ class JwtTokenIssuerTest {
     issuer.issueAccessToken(User.register(new Email("john@example.com")));
 
     assertEquals(List.of("CUSTOMER"), jwtEncoder.claims.get("roles"));
+    assertEquals(
+        List.of("CUSTOMER_PROFILE_ACCESS", "CUSTOMER_SUBSCRIPTION_MANAGE_OWN"),
+        jwtEncoder.claims.get("permissions"));
     assertEquals("CUSTOMER", jwtEncoder.claims.get("account_profile"));
     assertEquals("INDIVIDUAL", jwtEncoder.claims.get("customer_profile_type"));
   }

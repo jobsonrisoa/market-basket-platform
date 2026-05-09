@@ -13,6 +13,7 @@ import com.jobson.market.auth.application.usecase.authentication.GoogleLoginUseC
 import com.jobson.market.auth.application.usecase.authentication.InvalidCredentialsException;
 import com.jobson.market.auth.application.usecase.authentication.LoginWithPasswordResult;
 import com.jobson.market.auth.domain.event.OutboxEvent;
+import com.jobson.market.auth.domain.model.AccountProfile;
 import com.jobson.market.auth.domain.model.AuthTokens;
 import com.jobson.market.auth.domain.model.Email;
 import com.jobson.market.auth.domain.model.OAuthAccount;
@@ -42,6 +43,7 @@ class GoogleLoginUseCaseTest {
 
     assertEquals("access-token", result.accessToken());
     assertEquals("refresh-token", result.refreshToken());
+    assertEquals(AccountProfile.CUSTOMER, result.accountProfile());
     assertEquals("auth.session.login_succeeded.v1", outbox.events.get(0).eventType());
   }
 
@@ -71,10 +73,10 @@ class GoogleLoginUseCaseTest {
             new FakeOAuthAccountRepository(),
             new FakeTokenIssuer(),
             new FakeOutboxEventRepository());
+    GoogleLoginCommand command =
+        new GoogleLoginCommand("google-subject", "john@example.com", false);
 
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> useCase.login(new GoogleLoginCommand("google-subject", "john@example.com", false)));
+    assertThrows(InvalidCredentialsException.class, () -> useCase.login(command));
   }
 
   private static class FakeUserRepository implements UserRepository {

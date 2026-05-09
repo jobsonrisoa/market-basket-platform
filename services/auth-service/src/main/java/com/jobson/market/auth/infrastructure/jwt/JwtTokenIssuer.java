@@ -57,6 +57,7 @@ class JwtTokenIssuer implements TokenIssuer, AccessTokenIssuer {
             .claim("email", user.email().value())
             .claim("email_verified", user.emailVerified())
             .claim("roles", user.roles().stream().map(Enum::name).toList())
+            .claim("permissions", user.permissions().stream().map(Enum::name).toList())
             .claim("account_profile", user.accountProfile().name())
             .claim(
                 "customer_profile_type",

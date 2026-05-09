@@ -1,7 +1,7 @@
 package unit.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,8 +14,10 @@ import com.jobson.market.auth.application.usecase.registration.RegisterUserComma
 import com.jobson.market.auth.application.usecase.registration.RegisterUserResult;
 import com.jobson.market.auth.application.usecase.registration.RegisterUserUseCase;
 import com.jobson.market.auth.domain.event.OutboxEvent;
+import com.jobson.market.auth.domain.model.AccountProfile;
 import com.jobson.market.auth.domain.model.Email;
 import com.jobson.market.auth.domain.model.Password;
+import com.jobson.market.auth.domain.model.Permission;
 import com.jobson.market.auth.domain.model.Role;
 import com.jobson.market.auth.domain.model.User;
 import java.util.ArrayList;
@@ -39,14 +41,15 @@ class RegisterUserUseCaseTest {
 
     assertEquals("john@example.com", result.email());
     assertTrue(result.roles().contains(Role.CUSTOMER));
+    assertTrue(result.permissions().contains(Permission.CUSTOMER_PROFILE_ACCESS));
+    assertEquals(AccountProfile.CUSTOMER, result.accountProfile());
     assertTrue(users.savedUser.isPresent());
     assertEquals(result.userId(), users.savedUser.orElseThrow().id());
     assertTrue(credentials.savedCredential.isPresent());
     assertEquals(result.userId(), credentials.savedCredential.orElseThrow().userId());
     assertEquals(
         "hashed::Str0ng-password!", credentials.savedCredential.orElseThrow().passwordHash());
-    assertFalse(
-        credentials.savedCredential.orElseThrow().passwordHash().equals("Str0ng-password!"));
+    assertNotEquals("Str0ng-password!", credentials.savedCredential.orElseThrow().passwordHash());
     assertEquals(1, outbox.events.size());
     assertEquals("auth.user.registered.v1", outbox.events.get(0).eventType());
     assertEquals(result.userId().toString(), outbox.events.get(0).aggregateId());
@@ -60,10 +63,9 @@ class RegisterUserUseCaseTest {
     FakeOutboxEventRepository outbox = new FakeOutboxEventRepository();
     RegisterUserUseCase useCase =
         new RegisterUserUseCase(users, credentials, new FakePasswordHasher(), outbox);
+    RegisterUserCommand command = new RegisterUserCommand("john@example.com", "Str0ng-password!");
 
-    assertThrows(
-        DuplicateEmailException.class,
-        () -> useCase.register(new RegisterUserCommand("john@example.com", "Str0ng-password!")));
+    assertThrows(DuplicateEmailException.class, () -> useCase.register(command));
 
     assertTrue(credentials.savedCredential.isEmpty());
     assertTrue(outbox.events.isEmpty());

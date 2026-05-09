@@ -68,8 +68,12 @@ class AuthUseCaseConfiguration {
   }
 
   @Bean
-  RefreshTokenUseCase refreshTokenUseCase(RefreshTokenService refreshTokenService) {
-    return new RefreshTokenUseCase(refreshTokenService);
+  RefreshTokenUseCase refreshTokenUseCase(
+      RefreshTokenService refreshTokenService,
+      RefreshTokenRepository refreshTokens,
+      RefreshTokenCodec refreshTokenCodec,
+      UserRepository users) {
+    return new RefreshTokenUseCase(refreshTokenService, refreshTokens, refreshTokenCodec, users);
   }
 
   @Bean

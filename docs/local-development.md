@@ -90,6 +90,8 @@ Repeat per service as needed:
 
 Common Compose variables:
 
+Copy `.env.example` to `.env` for local Compose overrides. Keep `.env` local-only and do not commit environment-specific secrets.
+
 | Variable | Default |
 | --- | --- |
 | `POSTGRES_USER` | `market` |

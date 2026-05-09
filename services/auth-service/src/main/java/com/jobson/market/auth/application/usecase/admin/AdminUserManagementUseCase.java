@@ -3,6 +3,7 @@ package com.jobson.market.auth.application.usecase.admin;
 import com.jobson.market.auth.application.port.event.OutboxEventRepository;
 import com.jobson.market.auth.application.port.identity.UserRepository;
 import com.jobson.market.auth.domain.event.OutboxEvent;
+import com.jobson.market.auth.domain.model.Permission;
 import com.jobson.market.auth.domain.model.Role;
 import com.jobson.market.auth.domain.model.User;
 import java.util.Objects;
@@ -21,7 +22,8 @@ public class AdminUserManagementUseCase {
 
   @Transactional
   public User assignRole(AssignRoleCommand command) {
-    requireAdmin(command.actorUserId());
+    User actor = requirePermission(command.actorUserId(), Permission.AUTH_USER_ROLE_ASSIGN);
+    requireSuperAdminForSensitiveRole(actor, command.role());
     User updated = users.save(findUser(command.targetUserId()).assignRole(command.role()));
     outbox.save(OutboxEvent.roleAssigned(updated, command.role(), command.actorUserId()));
     return updated;
@@ -29,7 +31,8 @@ public class AdminUserManagementUseCase {
 
   @Transactional
   public User removeRole(RemoveRoleCommand command) {
-    requireAdmin(command.actorUserId());
+    User actor = requirePermission(command.actorUserId(), Permission.AUTH_USER_ROLE_REVOKE);
+    requireSuperAdminForSensitiveRole(actor, command.role());
     User updated = users.save(findUser(command.targetUserId()).removeRole(command.role()));
     outbox.save(OutboxEvent.roleRemoved(updated, command.role(), command.actorUserId()));
     return updated;
@@ -37,7 +40,7 @@ public class AdminUserManagementUseCase {
 
   @Transactional
   public User suspend(UUID actorUserId, UUID targetUserId) {
-    requireAdmin(actorUserId);
+    requirePermission(actorUserId, Permission.PLATFORM_SELLER_REVIEW);
     User updated = users.save(findUser(targetUserId).suspend());
     outbox.save(OutboxEvent.accountSuspended(updated, actorUserId));
     return updated;
@@ -45,15 +48,22 @@ public class AdminUserManagementUseCase {
 
   @Transactional
   public User reactivate(UUID actorUserId, UUID targetUserId) {
-    requireAdmin(actorUserId);
+    requirePermission(actorUserId, Permission.PLATFORM_SELLER_REVIEW);
     User updated = users.save(findUser(targetUserId).reactivate());
     outbox.save(OutboxEvent.accountReactivated(updated, actorUserId));
     return updated;
   }
 
-  private void requireAdmin(UUID actorUserId) {
+  private User requirePermission(UUID actorUserId, Permission permission) {
     User actor = findUser(actorUserId);
-    if (!actor.hasRole(Role.ADMIN)) {
+    if (!actor.hasPermission(permission)) {
+      throw new ForbiddenUserManagementException();
+    }
+    return actor;
+  }
+
+  private void requireSuperAdminForSensitiveRole(User actor, Role role) {
+    if (role.isSecuritySensitive() && !actor.hasRole(Role.SUPER_ADMIN)) {
       throw new ForbiddenUserManagementException();
     }
   }

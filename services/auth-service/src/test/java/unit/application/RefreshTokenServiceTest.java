@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -42,6 +43,20 @@ class RefreshTokenServiceTest {
     assertEquals("raw-token-1", issued.rawToken());
     assertEquals(refreshTokens.familyId, issued.familyId());
     assertEquals(now.plus(Duration.ofDays(30)), issued.expiresAt());
+  }
+
+  @Test
+  void shouldCreateIndependentRefreshTokenFamiliesForSeparateSessions() {
+    User user = User.register(new Email("john@example.com"));
+    FakeRefreshTokenRepository refreshTokens = new FakeRefreshTokenRepository();
+    RefreshTokenService service = newService(refreshTokens, new FakeUserRepository(user));
+
+    RefreshTokenService.IssuedRawRefreshToken mobileSession = service.issueInitial(user);
+    RefreshTokenService.IssuedRawRefreshToken browserSession = service.issueInitial(user);
+
+    assertEquals(2, refreshTokens.createdFamilyIds.size());
+    assertEquals(mobileSession.familyId(), refreshTokens.createdFamilyIds.get(0));
+    assertEquals(browserSession.familyId(), refreshTokens.createdFamilyIds.get(1));
   }
 
   @Test
@@ -103,7 +118,7 @@ class RefreshTokenServiceTest {
   }
 
   @Test
-  void shouldRevokeCurrentSessionAndAllUserSessions() {
+  void shouldRevokeCurrentSession() {
     User user = User.register(new Email("john@example.com")).verifyEmail();
     FakeRefreshTokenRepository refreshTokens = new FakeRefreshTokenRepository();
     UUID familyId = refreshTokens.createFamily(user.id());
@@ -114,9 +129,28 @@ class RefreshTokenServiceTest {
         newService(refreshTokens, new FakeUserRepository(user), outbox, new SequencedCodec());
 
     service.revokeSession("current");
+
+    assertEquals("logout", refreshTokens.revocationReason);
+    assertEquals(List.of(familyId), refreshTokens.revokedFamilyIds);
+    assertEquals(1, outbox.events.size());
+    assertEquals("auth.session.revoked.v1", outbox.events.get(0).eventType());
+  }
+
+  @Test
+  void shouldRevokeAllActiveUserSessions() {
+    User user = User.register(new Email("john@example.com")).verifyEmail();
+    FakeRefreshTokenRepository refreshTokens = new FakeRefreshTokenRepository();
+    UUID mobileFamilyId = refreshTokens.createFamily(user.id());
+    UUID browserFamilyId = refreshTokens.createFamily(user.id());
+    FakeOutboxEventRepository outbox = new FakeOutboxEventRepository();
+    RefreshTokenService service =
+        newService(refreshTokens, new FakeUserRepository(user), outbox, new SequencedCodec());
+
     service.revokeAll(user.id());
 
     assertEquals("logout_all", refreshTokens.revocationReason);
+    assertEquals(
+        Set.of(mobileFamilyId, browserFamilyId), Set.copyOf(refreshTokens.revokedAllFamilyIds));
     assertEquals(2, outbox.events.size());
     assertEquals("auth.session.revoked.v1", outbox.events.get(0).eventType());
     assertEquals("auth.session.revoked.v1", outbox.events.get(1).eventType());
@@ -162,6 +196,10 @@ class RefreshTokenServiceTest {
 
   private static class FakeRefreshTokenRepository implements RefreshTokenRepository {
     private final Map<UUID, UUID> familyUsers = new HashMap<>();
+    private final List<UUID> activeFamilyIds = new ArrayList<>();
+    private final List<UUID> createdFamilyIds = new ArrayList<>();
+    private final List<UUID> revokedFamilyIds = new ArrayList<>();
+    private List<UUID> revokedAllFamilyIds = List.of();
     private UUID familyId;
     private StoredRefreshToken stored;
     private Instant usedAt;
@@ -172,6 +210,8 @@ class RefreshTokenServiceTest {
     public UUID createFamily(UUID userId) {
       familyId = UUID.randomUUID();
       familyUsers.put(familyId, userId);
+      activeFamilyIds.add(familyId);
+      createdFamilyIds.add(familyId);
       return familyId;
     }
 
@@ -203,13 +243,17 @@ class RefreshTokenServiceTest {
     @Override
     public void revokeFamily(UUID familyId, Instant revokedAt, String reason) {
       familyActive = false;
+      activeFamilyIds.remove(familyId);
+      revokedFamilyIds.add(familyId);
       revocationReason = reason;
     }
 
     @Override
     public void revokeAllFamiliesByUserId(UUID userId, Instant revokedAt, String reason) {
       revocationReason = reason;
+      revokedAllFamilyIds = findActiveFamilyIdsByUserId(userId);
       familyActive = false;
+      activeFamilyIds.removeAll(revokedAllFamilyIds);
     }
 
     @Override
@@ -221,6 +265,7 @@ class RefreshTokenServiceTest {
     public List<UUID> findActiveFamilyIdsByUserId(UUID userId) {
       return familyUsers.entrySet().stream()
           .filter(entry -> entry.getValue().equals(userId))
+          .filter(entry -> activeFamilyIds.contains(entry.getKey()))
           .map(Map.Entry::getKey)
           .toList();
     }

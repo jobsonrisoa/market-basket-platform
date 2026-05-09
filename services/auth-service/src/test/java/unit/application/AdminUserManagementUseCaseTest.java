@@ -26,8 +26,8 @@ import org.junit.jupiter.api.Test;
 class AdminUserManagementUseCaseTest {
 
   @Test
-  void shouldAllowAdminToPromoteCustomerToAdmin() {
-    User admin = User.admin(new Email("admin@example.com"));
+  void shouldAllowSuperAdminToPromoteCustomerToAdmin() {
+    User admin = User.superAdmin(new Email("admin@example.com"));
     User customer = User.register(new Email("customer@example.com"));
     FakeUserRepository users = new FakeUserRepository(admin, customer);
     FakeOutboxEventRepository outbox = new FakeOutboxEventRepository();
@@ -42,16 +42,44 @@ class AdminUserManagementUseCaseTest {
   }
 
   @Test
+  void shouldAllowAdminToAssignSellerRoles() {
+    User admin = User.admin(new Email("admin@example.com"));
+    User customer = User.register(new Email("customer@example.com"));
+    FakeOutboxEventRepository outbox = new FakeOutboxEventRepository();
+    AdminUserManagementUseCase useCase =
+        new AdminUserManagementUseCase(new FakeUserRepository(admin, customer), outbox);
+
+    User updated =
+        useCase.assignRole(new AssignRoleCommand(admin.id(), customer.id(), Role.SELLER_OWNER));
+
+    assertTrue(updated.roles().contains(Role.SELLER_OWNER));
+    assertTrue(outbox.events.get(0).payload().contains("\"accountProfile\":\"SELLER\""));
+  }
+
+  @Test
+  void shouldRejectAdminAssigningSecuritySensitiveRoles() {
+    User admin = User.admin(new Email("admin@example.com"));
+    User customer = User.register(new Email("customer@example.com"));
+    FakeOutboxEventRepository outbox = new FakeOutboxEventRepository();
+    AdminUserManagementUseCase useCase =
+        new AdminUserManagementUseCase(new FakeUserRepository(admin, customer), outbox);
+    AssignRoleCommand command = new AssignRoleCommand(admin.id(), customer.id(), Role.ADMIN);
+
+    assertThrows(ForbiddenUserManagementException.class, () -> useCase.assignRole(command));
+
+    assertTrue(outbox.events.isEmpty());
+  }
+
+  @Test
   void shouldRejectCustomerPromotingAnotherUser() {
     User actor = User.register(new Email("actor@example.com"));
     User target = User.register(new Email("target@example.com"));
     FakeOutboxEventRepository outbox = new FakeOutboxEventRepository();
     AdminUserManagementUseCase useCase =
         new AdminUserManagementUseCase(new FakeUserRepository(actor, target), outbox);
+    AssignRoleCommand command = new AssignRoleCommand(actor.id(), target.id(), Role.ADMIN);
 
-    assertThrows(
-        ForbiddenUserManagementException.class,
-        () -> useCase.assignRole(new AssignRoleCommand(actor.id(), target.id(), Role.ADMIN)));
+    assertThrows(ForbiddenUserManagementException.class, () -> useCase.assignRole(command));
 
     assertTrue(outbox.events.isEmpty());
   }
@@ -59,15 +87,16 @@ class AdminUserManagementUseCaseTest {
   @Test
   void shouldAllowAdminToRemoveRole() {
     User admin = User.admin(new Email("admin@example.com"));
-    User target = User.register(new Email("target@example.com")).assignRole(Role.ADMIN);
+    User target = User.register(new Email("target@example.com")).assignRole(Role.SELLER_STAFF);
     FakeOutboxEventRepository outbox = new FakeOutboxEventRepository();
     AdminUserManagementUseCase useCase =
         new AdminUserManagementUseCase(new FakeUserRepository(admin, target), outbox);
 
-    User updated = useCase.removeRole(new RemoveRoleCommand(admin.id(), target.id(), Role.ADMIN));
+    User updated =
+        useCase.removeRole(new RemoveRoleCommand(admin.id(), target.id(), Role.SELLER_STAFF));
 
     assertTrue(updated.roles().contains(Role.CUSTOMER));
-    assertTrue(updated.roles().stream().noneMatch(Role.ADMIN::equals));
+    assertTrue(updated.roles().stream().noneMatch(Role.SELLER_STAFF::equals));
     assertEquals("auth.user.role_removed.v1", outbox.events.get(0).eventType());
   }
 

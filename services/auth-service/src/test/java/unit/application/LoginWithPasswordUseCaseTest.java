@@ -13,9 +13,11 @@ import com.jobson.market.auth.application.usecase.authentication.LoginWithPasswo
 import com.jobson.market.auth.application.usecase.authentication.LoginWithPasswordResult;
 import com.jobson.market.auth.application.usecase.authentication.LoginWithPasswordUseCase;
 import com.jobson.market.auth.domain.event.OutboxEvent;
+import com.jobson.market.auth.domain.model.AccountProfile;
 import com.jobson.market.auth.domain.model.AuthTokens;
 import com.jobson.market.auth.domain.model.Email;
 import com.jobson.market.auth.domain.model.Password;
+import com.jobson.market.auth.domain.model.Permission;
 import com.jobson.market.auth.domain.model.User;
 import com.jobson.market.auth.domain.model.UserStatus;
 import java.util.ArrayList;
@@ -42,6 +44,10 @@ class LoginWithPasswordUseCaseTest {
 
     assertEquals("access-token", result.accessToken());
     assertEquals("refresh-token", result.refreshToken());
+    assertEquals(AccountProfile.CUSTOMER, result.accountProfile());
+    assertEquals(
+        List.of(Permission.CUSTOMER_PROFILE_ACCESS, Permission.CUSTOMER_SUBSCRIPTION_MANAGE_OWN),
+        result.permissions().stream().toList());
     assertEquals(1, outbox.events.size());
     assertEquals("auth.session.login_succeeded.v1", outbox.events.get(0).eventType());
     assertEquals(user.id().toString(), outbox.events.get(0).aggregateId());
@@ -57,10 +63,10 @@ class LoginWithPasswordUseCaseTest {
     LoginWithPasswordUseCase useCase =
         new LoginWithPasswordUseCase(
             users, credentials, new RejectingPasswordVerifier(), new FakeTokenIssuer(), outbox);
+    LoginWithPasswordCommand command =
+        new LoginWithPasswordCommand("john@example.com", "Str0ng-password!");
 
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> useCase.login(new LoginWithPasswordCommand("john@example.com", "Str0ng-password!")));
+    assertThrows(InvalidCredentialsException.class, () -> useCase.login(command));
 
     assertEquals(1, outbox.events.size());
     assertEquals("auth.session.login_failed.v1", outbox.events.get(0).eventType());
@@ -77,10 +83,10 @@ class LoginWithPasswordUseCaseTest {
             new MatchingPasswordVerifier(),
             tokenIssuer,
             outbox);
+    LoginWithPasswordCommand command =
+        new LoginWithPasswordCommand("john@example.com", "Str0ng-password!");
 
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> useCase.login(new LoginWithPasswordCommand("john@example.com", "Str0ng-password!")));
+    assertThrows(InvalidCredentialsException.class, () -> useCase.login(command));
 
     assertEquals(0, tokenIssuer.issuedTokens);
     assertEquals(1, outbox.events.size());
@@ -100,10 +106,10 @@ class LoginWithPasswordUseCaseTest {
             new MatchingPasswordVerifier(),
             tokenIssuer,
             outbox);
+    LoginWithPasswordCommand command =
+        new LoginWithPasswordCommand("john@example.com", "Str0ng-password!");
 
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> useCase.login(new LoginWithPasswordCommand("john@example.com", "Str0ng-password!")));
+    assertThrows(InvalidCredentialsException.class, () -> useCase.login(command));
 
     assertEquals(0, tokenIssuer.issuedTokens);
     assertEquals(1, outbox.events.size());

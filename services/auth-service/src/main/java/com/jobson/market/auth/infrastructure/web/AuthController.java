@@ -16,6 +16,7 @@ import com.jobson.market.auth.application.usecase.registration.RegisterUserUseCa
 import com.jobson.market.auth.domain.model.Role;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
@@ -90,17 +91,19 @@ class AuthController {
 
   @GetMapping("/me")
   Map<String, Object> me(@AuthenticationPrincipal Jwt jwt) {
-    return Map.of(
-        "userId", jwt.getSubject(),
-        "email", jwt.getClaimAsString("email"),
-        "emailVerified", jwt.getClaim("email_verified"),
-        "roles", jwt.getClaimAsStringList("roles"),
-        "accountProfile", jwt.getClaimAsString("account_profile"),
-        "customerProfileType", jwt.getClaimAsString("customer_profile_type"));
+    Map<String, Object> response = new LinkedHashMap<>();
+    response.put("userId", jwt.getSubject());
+    response.put("email", jwt.getClaimAsString("email"));
+    response.put("emailVerified", jwt.getClaim("email_verified"));
+    response.put("roles", jwt.getClaimAsStringList("roles"));
+    response.put("permissions", jwt.getClaimAsStringList("permissions"));
+    response.put("accountProfile", jwt.getClaimAsString("account_profile"));
+    response.put("customerProfileType", jwt.getClaimAsString("customer_profile_type"));
+    return response;
   }
 
   @PostMapping("/admin/users/{userId}/roles")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAuthority('AUTH_USER_ROLE_ASSIGN')")
   ResponseEntity<Void> assignRole(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID userId,
@@ -111,7 +114,7 @@ class AuthController {
   }
 
   @DeleteMapping("/admin/users/{userId}/roles/{role}")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAuthority('AUTH_USER_ROLE_REVOKE')")
   ResponseEntity<Void> removeRole(
       @AuthenticationPrincipal Jwt jwt, @PathVariable UUID userId, @PathVariable Role role) {
     adminUserManagement.removeRole(
@@ -120,14 +123,14 @@ class AuthController {
   }
 
   @PostMapping("/admin/users/{userId}/suspend")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAuthority('PLATFORM_SELLER_REVIEW')")
   ResponseEntity<Void> suspend(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID userId) {
     adminUserManagement.suspend(UUID.fromString(jwt.getSubject()), userId);
     return ResponseEntity.noContent().build();
   }
 
   @PostMapping("/admin/users/{userId}/reactivate")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAuthority('PLATFORM_SELLER_REVIEW')")
   ResponseEntity<Void> reactivate(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID userId) {
     adminUserManagement.reactivate(UUID.fromString(jwt.getSubject()), userId);
     return ResponseEntity.noContent().build();

@@ -1,5 +1,6 @@
 package com.jobson.market.auth.infrastructure.security;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
@@ -24,6 +25,7 @@ class SecurityConfiguration {
   }
 
   @Bean
+  @SuppressWarnings({"java:S112", "java:S4502"})
   SecurityFilterChain securityFilterChain(
       HttpSecurity http,
       GoogleOAuth2SuccessHandler googleSuccessHandler,
@@ -60,14 +62,22 @@ class SecurityConfiguration {
     JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
     converter.setJwtGrantedAuthoritiesConverter(
         jwt -> {
+          List<GrantedAuthority> authorities = new ArrayList<>();
           List<String> roles = jwt.getClaimAsStringList("roles");
-          if (roles == null) {
-            return List.of();
+          if (roles != null) {
+            roles.stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .map(GrantedAuthority.class::cast)
+                .forEach(authorities::add);
           }
-          return roles.stream()
-              .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-              .map(GrantedAuthority.class::cast)
-              .toList();
+          List<String> permissions = jwt.getClaimAsStringList("permissions");
+          if (permissions != null) {
+            permissions.stream()
+                .map(SimpleGrantedAuthority::new)
+                .map(GrantedAuthority.class::cast)
+                .forEach(authorities::add);
+          }
+          return authorities;
         });
     return converter;
   }

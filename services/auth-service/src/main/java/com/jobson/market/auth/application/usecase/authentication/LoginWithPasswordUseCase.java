@@ -62,6 +62,6 @@ public class LoginWithPasswordUseCase {
 
     AuthTokens tokens = tokenIssuer.issue(foundUser);
     outbox.save(OutboxEvent.loginSucceeded(foundUser));
-    return new LoginWithPasswordResult(tokens.accessToken(), tokens.refreshToken());
+    return LoginWithPasswordResult.from(tokens, foundUser);
   }
 }

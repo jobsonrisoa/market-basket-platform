@@ -44,7 +44,7 @@ public class GoogleLoginUseCase {
 
     AuthTokens tokens = tokenIssuer.issue(user);
     outbox.save(OutboxEvent.loginSucceeded(user));
-    return new LoginWithPasswordResult(tokens.accessToken(), tokens.refreshToken());
+    return LoginWithPasswordResult.from(tokens, user);
   }
 
   private User linkGoogleAccount(String subject, Email email) {
