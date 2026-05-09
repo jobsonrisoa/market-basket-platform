@@ -105,13 +105,19 @@ No Alertmanager service is configured yet, so alerts are visible in Prometheus b
 
 Sentry is wired into every Spring service through `sentry-spring-boot-4-starter`. It is disabled by default because `SENTRY_DSN` is empty in local Compose.
 
-To enable it locally or in an environment file:
+To enable it locally or in an environment file, set the tracked `.env` values or provide environment-specific overrides on the deployment host:
 
 ```bash
 SENTRY_DSN=https://examplePublicKey@o0.ingest.sentry.io/0
 SENTRY_ENVIRONMENT=staging
 SENTRY_RELEASE=market-basket-platform@<git-sha>
 SENTRY_TRACES_SAMPLE_RATE=0.1
+```
+
+Restart affected services after changing these values:
+
+```bash
+docker compose up -d --force-recreate auth-service customer-service seller-service catalog-service subscription-service order-service inventory-service notification-service
 ```
 
 Keep `SENTRY_TRACES_SAMPLE_RATE` low in production until baseline traffic and cost are understood.

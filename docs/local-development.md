@@ -100,6 +100,15 @@ Common Compose variables:
 | `IMAGE_NAMESPACE` | `jobson` |
 | `IMAGE_TAG` | `local` |
 
+Observability variables:
+
+| Variable | Default |
+| --- | --- |
+| `SENTRY_DSN` | empty |
+| `SENTRY_ENVIRONMENT` | `local` |
+| `SENTRY_RELEASE` | `market-basket-platform@local` |
+| `SENTRY_TRACES_SAMPLE_RATE` | `0.0` |
+
 Auth variables:
 
 | Variable | Default |
