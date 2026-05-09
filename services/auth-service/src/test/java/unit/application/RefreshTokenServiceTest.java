@@ -9,7 +9,7 @@ import com.jobson.market.auth.application.port.identity.UserRepository;
 import com.jobson.market.auth.application.port.token.AccessTokenIssuer;
 import com.jobson.market.auth.application.port.token.RefreshTokenRepository;
 import com.jobson.market.auth.application.service.RefreshTokenService;
-import com.jobson.market.auth.application.usecase.InvalidRefreshTokenException;
+import com.jobson.market.auth.application.usecase.authentication.InvalidRefreshTokenException;
 import com.jobson.market.auth.domain.event.OutboxEvent;
 import com.jobson.market.auth.domain.model.AuthTokens;
 import com.jobson.market.auth.domain.model.Email;

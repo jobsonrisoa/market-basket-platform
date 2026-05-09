@@ -1,8 +1,8 @@
 package com.jobson.market.auth.infrastructure.security;
 
-import com.jobson.market.auth.application.usecase.GoogleLoginCommand;
-import com.jobson.market.auth.application.usecase.GoogleLoginUseCase;
-import com.jobson.market.auth.application.usecase.LoginWithPasswordResult;
+import com.jobson.market.auth.application.usecase.authentication.GoogleLoginCommand;
+import com.jobson.market.auth.application.usecase.authentication.GoogleLoginUseCase;
+import com.jobson.market.auth.application.usecase.authentication.LoginWithPasswordResult;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;

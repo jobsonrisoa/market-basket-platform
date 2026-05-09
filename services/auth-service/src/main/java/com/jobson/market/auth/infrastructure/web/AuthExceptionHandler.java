@@ -1,10 +1,10 @@
 package com.jobson.market.auth.infrastructure.web;
 
-import com.jobson.market.auth.application.usecase.DuplicateEmailException;
-import com.jobson.market.auth.application.usecase.ForbiddenUserManagementException;
-import com.jobson.market.auth.application.usecase.InvalidCredentialsException;
-import com.jobson.market.auth.application.usecase.InvalidRefreshTokenException;
-import com.jobson.market.auth.application.usecase.UserNotFoundException;
+import com.jobson.market.auth.application.usecase.admin.ForbiddenUserManagementException;
+import com.jobson.market.auth.application.usecase.admin.UserNotFoundException;
+import com.jobson.market.auth.application.usecase.authentication.InvalidCredentialsException;
+import com.jobson.market.auth.application.usecase.authentication.InvalidRefreshTokenException;
+import com.jobson.market.auth.application.usecase.registration.DuplicateEmailException;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

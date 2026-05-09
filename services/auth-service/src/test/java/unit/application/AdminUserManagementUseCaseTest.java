@@ -6,10 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jobson.market.auth.application.port.event.OutboxEventRepository;
 import com.jobson.market.auth.application.port.identity.UserRepository;
-import com.jobson.market.auth.application.usecase.AdminUserManagementUseCase;
-import com.jobson.market.auth.application.usecase.AssignRoleCommand;
-import com.jobson.market.auth.application.usecase.ForbiddenUserManagementException;
-import com.jobson.market.auth.application.usecase.RemoveRoleCommand;
+import com.jobson.market.auth.application.usecase.admin.AdminUserManagementUseCase;
+import com.jobson.market.auth.application.usecase.admin.AssignRoleCommand;
+import com.jobson.market.auth.application.usecase.admin.ForbiddenUserManagementException;
+import com.jobson.market.auth.application.usecase.admin.RemoveRoleCommand;
 import com.jobson.market.auth.domain.event.OutboxEvent;
 import com.jobson.market.auth.domain.model.Email;
 import com.jobson.market.auth.domain.model.Role;
