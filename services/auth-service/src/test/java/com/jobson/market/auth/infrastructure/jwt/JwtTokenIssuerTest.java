@@ -87,16 +87,24 @@ class JwtTokenIssuerTest {
     }
 
     @Override
-    public void markUsed(UUID tokenId, Instant usedAt) {}
+    public void markUsed(UUID tokenId, Instant usedAt) {
+      // This fake never rotates tokens, so no used timestamp has to be tracked.
+    }
 
     @Override
-    public void revokeToken(UUID tokenId, Instant revokedAt) {}
+    public void revokeToken(UUID tokenId, Instant revokedAt) {
+      // Token revocation is outside this JWT claim test.
+    }
 
     @Override
-    public void revokeFamily(UUID familyId, Instant revokedAt, String reason) {}
+    public void revokeFamily(UUID familyId, Instant revokedAt, String reason) {
+      // Family revocation is outside this JWT claim test.
+    }
 
     @Override
-    public void revokeAllFamiliesByUserId(UUID userId, Instant revokedAt, String reason) {}
+    public void revokeAllFamiliesByUserId(UUID userId, Instant revokedAt, String reason) {
+      // Bulk revocation is outside this JWT claim test.
+    }
 
     @Override
     public boolean isFamilyActive(UUID familyId) {

@@ -11,6 +11,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 class JpaRefreshTokenRepository implements RefreshTokenRepository {
 
+  private static final String ACTIVE_STATUS = "ACTIVE";
+
   private final SpringDataRefreshTokenFamilyRepository families;
   private final SpringDataRefreshTokenRepository tokens;
   private final Clock clock;
@@ -27,7 +29,7 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
   @Override
   public UUID createFamily(UUID userId) {
     UUID familyId = UUID.randomUUID();
-    families.save(new RefreshTokenFamilyEntity(familyId, userId, "ACTIVE", clock.instant()));
+    families.save(new RefreshTokenFamilyEntity(familyId, userId, ACTIVE_STATUS, clock.instant()));
     return familyId;
   }
 
@@ -88,7 +90,7 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
 
   @Override
   public void revokeAllFamiliesByUserId(UUID userId, Instant revokedAt, String reason) {
-    for (RefreshTokenFamilyEntity family : families.findByUserIdAndStatus(userId, "ACTIVE")) {
+    for (RefreshTokenFamilyEntity family : families.findByUserIdAndStatus(userId, ACTIVE_STATUS)) {
       revokeFamily(family.id(), revokedAt, reason);
     }
   }
@@ -100,7 +102,7 @@ class JpaRefreshTokenRepository implements RefreshTokenRepository {
 
   @Override
   public List<UUID> findActiveFamilyIdsByUserId(UUID userId) {
-    return families.findByUserIdAndStatus(userId, "ACTIVE").stream()
+    return families.findByUserIdAndStatus(userId, ACTIVE_STATUS).stream()
         .map(RefreshTokenFamilyEntity::id)
         .toList();
   }

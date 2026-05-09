@@ -1,5 +1,6 @@
 package com.jobson.market.auth.infrastructure.persistence;
 
+import com.jobson.market.auth.domain.event.OutboxEvent;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -11,6 +12,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "outbox_events")
 class OutboxEventEntity {
+
+  private static final String PENDING_STATUS = "PENDING";
+  private static final String PUBLISHED_STATUS = "PUBLISHED";
 
   @Id private UUID eventId;
 
@@ -40,23 +44,17 @@ class OutboxEventEntity {
 
   protected OutboxEventEntity() {}
 
-  OutboxEventEntity(
-      UUID eventId,
-      String aggregateId,
-      String eventType,
-      int version,
-      Instant occurredAt,
-      String correlationId,
-      String payload,
-      String status) {
-    this.eventId = eventId;
-    this.aggregateId = aggregateId;
-    this.eventType = eventType;
-    this.version = version;
-    this.occurredAt = occurredAt;
-    this.correlationId = correlationId;
-    this.payload = payload;
-    this.status = status;
+  static OutboxEventEntity pending(OutboxEvent event) {
+    OutboxEventEntity entity = new OutboxEventEntity();
+    entity.eventId = event.eventId();
+    entity.aggregateId = event.aggregateId();
+    entity.eventType = event.eventType();
+    entity.version = event.version();
+    entity.occurredAt = event.occurredAt();
+    entity.correlationId = event.correlationId();
+    entity.payload = event.payload();
+    entity.status = PENDING_STATUS;
+    return entity;
   }
 
   UUID eventId() {
@@ -84,7 +82,7 @@ class OutboxEventEntity {
   }
 
   void markPublished(Instant publishedAt) {
-    this.status = "PUBLISHED";
+    this.status = PUBLISHED_STATUS;
     this.publishedAt = publishedAt;
   }
 }

@@ -3,6 +3,7 @@ package com.jobson.market.auth.infrastructure.persistence;
 import com.jobson.market.auth.domain.model.AccountProfile;
 import com.jobson.market.auth.domain.model.CustomerProfileType;
 import com.jobson.market.auth.domain.model.Role;
+import com.jobson.market.auth.domain.model.User;
 import com.jobson.market.auth.domain.model.UserStatus;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -56,25 +57,18 @@ class UserEntity {
 
   protected UserEntity() {}
 
-  UserEntity(
-      UUID id,
-      String email,
-      boolean emailVerified,
-      UserStatus status,
-      Set<Role> roles,
-      AccountProfile accountProfile,
-      CustomerProfileType customerProfileType,
-      Instant createdAt,
-      Instant updatedAt) {
-    this.id = id;
-    this.email = email;
-    this.emailVerified = emailVerified;
-    this.status = status;
-    this.roles = roles.isEmpty() ? EnumSet.noneOf(Role.class) : EnumSet.copyOf(roles);
-    this.accountProfile = accountProfile;
-    this.customerProfileType = customerProfileType;
-    this.createdAt = createdAt;
-    this.updatedAt = updatedAt;
+  static UserEntity fromDomain(User user, Instant createdAt, Instant updatedAt) {
+    UserEntity entity = new UserEntity();
+    entity.id = user.id();
+    entity.email = user.email().value();
+    entity.emailVerified = user.emailVerified();
+    entity.status = user.status();
+    entity.roles = copyRoles(user.roles());
+    entity.accountProfile = user.accountProfile();
+    entity.customerProfileType = user.customerProfileType();
+    entity.createdAt = createdAt;
+    entity.updatedAt = updatedAt;
+    return entity;
   }
 
   UUID id() {
@@ -103,5 +97,13 @@ class UserEntity {
 
   CustomerProfileType customerProfileType() {
     return customerProfileType;
+  }
+
+  Instant createdAt() {
+    return createdAt;
+  }
+
+  private static Set<Role> copyRoles(Set<Role> roles) {
+    return roles.isEmpty() ? EnumSet.noneOf(Role.class) : EnumSet.copyOf(roles);
   }
 }

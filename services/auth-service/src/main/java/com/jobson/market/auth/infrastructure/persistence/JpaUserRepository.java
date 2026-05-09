@@ -39,19 +39,8 @@ class JpaUserRepository implements UserRepository {
   public User save(User user) {
     UserEntity existing = users.findById(user.id()).orElse(null);
     Instant now = clock.instant();
-    Instant createdAt = existing == null ? now : now;
-    return toDomain(
-        users.save(
-            new UserEntity(
-                user.id(),
-                user.email().value(),
-                user.emailVerified(),
-                user.status(),
-                user.roles(),
-                user.accountProfile(),
-                user.customerProfileType(),
-                createdAt,
-                now)));
+    Instant createdAt = existing == null ? now : existing.createdAt();
+    return toDomain(users.save(UserEntity.fromDomain(user, createdAt, now)));
   }
 
   private User toDomain(UserEntity entity) {

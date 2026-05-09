@@ -196,7 +196,9 @@ class RefreshTokenServiceTest {
     }
 
     @Override
-    public void revokeToken(UUID tokenId, Instant revokedAt) {}
+    public void revokeToken(UUID tokenId, Instant revokedAt) {
+      // The service under test revokes token families, not individual tokens.
+    }
 
     @Override
     public void revokeFamily(UUID familyId, Instant revokedAt, String reason) {

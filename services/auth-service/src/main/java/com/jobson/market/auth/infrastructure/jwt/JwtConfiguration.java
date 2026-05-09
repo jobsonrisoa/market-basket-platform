@@ -29,8 +29,8 @@ class JwtConfiguration {
     NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(keyStore.publicKey()).build();
     OAuth2TokenValidator<Jwt> issuer =
         JwtValidators.createDefaultWithIssuer(properties.jwt().issuer());
-    OAuth2TokenValidator<Jwt> audience =
-        new JwtClaimValidator<List<String>>(
+    JwtClaimValidator<List<String>> audience =
+        new JwtClaimValidator<>(
             "aud",
             audiences -> audiences != null && audiences.contains(properties.jwt().audience()));
     decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(issuer, audience));

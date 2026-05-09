@@ -146,7 +146,9 @@ class LoginWithPasswordUseCaseTest {
     }
 
     @Override
-    public void save(UUID userId, String passwordHash) {}
+    public void save(UUID userId, String passwordHash) {
+      // Login tests only read existing credentials.
+    }
 
     @Override
     public Optional<String> findPasswordHashByUserId(UUID userId) {

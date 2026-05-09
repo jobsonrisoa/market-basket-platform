@@ -27,6 +27,8 @@ public record OutboxEvent(
   private static final String REFRESH_TOKEN_ROTATED = "auth.session.refresh_token_rotated.v1";
   private static final String REFRESH_TOKEN_REUSED = "auth.session.refresh_token_reused.v1";
   private static final String SESSION_REVOKED = "auth.session.revoked.v1";
+  private static final String USER_EMAIL_PAYLOAD = "{\"userId\":\"%s\",\"email\":\"%s\"}";
+  private static final String REFRESH_TOKEN_PAYLOAD = "{\"userId\":\"%s\",\"familyId\":\"%s\"}";
 
   public OutboxEvent {
     Objects.requireNonNull(eventId, "eventId is required");
@@ -49,8 +51,7 @@ public record OutboxEvent(
   }
 
   public static OutboxEvent userRegistered(User user) {
-    String payload =
-        "{\"userId\":\"%s\",\"email\":\"%s\"}".formatted(user.id(), user.email().value());
+    String payload = USER_EMAIL_PAYLOAD.formatted(user.id(), user.email().value());
     return new OutboxEvent(
         UUID.randomUUID(),
         user.id().toString(),
@@ -62,8 +63,7 @@ public record OutboxEvent(
   }
 
   public static OutboxEvent loginSucceeded(User user) {
-    String payload =
-        "{\"userId\":\"%s\",\"email\":\"%s\"}".formatted(user.id(), user.email().value());
+    String payload = USER_EMAIL_PAYLOAD.formatted(user.id(), user.email().value());
     return new OutboxEvent(
         UUID.randomUUID(),
         user.id().toString(),
@@ -132,8 +132,7 @@ public record OutboxEvent(
   }
 
   public static OutboxEvent googleAccountLinked(User user) {
-    String payload =
-        "{\"userId\":\"%s\",\"email\":\"%s\"}".formatted(user.id(), user.email().value());
+    String payload = USER_EMAIL_PAYLOAD.formatted(user.id(), user.email().value());
     return new OutboxEvent(
         UUID.randomUUID(),
         user.id().toString(),
@@ -145,7 +144,7 @@ public record OutboxEvent(
   }
 
   public static OutboxEvent refreshTokenRotated(UUID userId, UUID familyId) {
-    String payload = "{\"userId\":\"%s\",\"familyId\":\"%s\"}".formatted(userId, familyId);
+    String payload = REFRESH_TOKEN_PAYLOAD.formatted(userId, familyId);
     return new OutboxEvent(
         UUID.randomUUID(),
         userId.toString(),
@@ -157,7 +156,7 @@ public record OutboxEvent(
   }
 
   public static OutboxEvent refreshTokenReused(UUID userId, UUID familyId) {
-    String payload = "{\"userId\":\"%s\",\"familyId\":\"%s\"}".formatted(userId, familyId);
+    String payload = REFRESH_TOKEN_PAYLOAD.formatted(userId, familyId);
     return new OutboxEvent(
         UUID.randomUUID(),
         userId.toString(),
@@ -169,7 +168,7 @@ public record OutboxEvent(
   }
 
   public static OutboxEvent sessionRevoked(UUID userId, UUID familyId) {
-    String payload = "{\"userId\":\"%s\",\"familyId\":\"%s\"}".formatted(userId, familyId);
+    String payload = REFRESH_TOKEN_PAYLOAD.formatted(userId, familyId);
     return new OutboxEvent(
         UUID.randomUUID(),
         userId.toString(),

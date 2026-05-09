@@ -9,5 +9,7 @@ import org.springframework.context.annotation.Import;
 class AuthServiceApplicationTests {
 
   @Test
-  void contextLoads() {}
+  void contextLoads() {
+    // Spring Boot performs the assertion by starting the application context.
+  }
 }

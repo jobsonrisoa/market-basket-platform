@@ -15,15 +15,6 @@ class JpaOutboxEventRepository implements OutboxEventRepository {
 
   @Override
   public void save(OutboxEvent event) {
-    events.save(
-        new OutboxEventEntity(
-            event.eventId(),
-            event.aggregateId(),
-            event.eventType(),
-            event.version(),
-            event.occurredAt(),
-            event.correlationId(),
-            event.payload(),
-            "PENDING"));
+    events.save(OutboxEventEntity.pending(event));
   }
 }
