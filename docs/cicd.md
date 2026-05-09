@@ -17,6 +17,7 @@ CI runs one matrix entry per service:
 
 - `auth-service`
 - `customer-service`
+- `seller-service`
 - `catalog-service`
 - `subscription-service`
 - `order-service`
@@ -46,6 +47,7 @@ Image names:
 
 - `ghcr.io/<owner>/market-auth-service`
 - `ghcr.io/<owner>/market-customer-service`
+- `ghcr.io/<owner>/market-seller-service`
 - `ghcr.io/<owner>/market-catalog-service`
 - `ghcr.io/<owner>/market-subscription-service`
 - `ghcr.io/<owner>/market-order-service`

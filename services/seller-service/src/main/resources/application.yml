@@ -1,0 +1,45 @@
+server:
+  port: ${SERVER_PORT:8087}
+
+spring:
+  application:
+    name: seller-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/market_seller}
+    username: ${SPRING_DATASOURCE_USERNAME:market}
+    password: ${SPRING_DATASOURCE_PASSWORD:market}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    open-in-view: false
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:local}
+  release: ${SENTRY_RELEASE:${spring.application.name}@local}
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE:0.0}

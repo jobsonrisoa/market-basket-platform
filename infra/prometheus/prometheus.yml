@@ -17,8 +17,15 @@ scrape_configs:
       - targets:
           - auth-service:8080
           - customer-service:8081
+          - seller-service:8087
           - catalog-service:8082
           - subscription-service:8083
           - order-service:8084
           - inventory-service:8085
           - notification-service:8086
+
+  - job_name: kong
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - kong:8100

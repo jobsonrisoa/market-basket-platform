@@ -1,6 +1,6 @@
 # Market Basket Platform
 
-Market Basket Platform is a Spring Boot microservice system for a grocery or market commerce domain. The repository currently contains seven independently buildable services, shared local infrastructure through Docker Compose, and GitHub Actions workflows for CI, container publication, and environment deployments.
+Market Basket Platform is a Spring Boot microservice system for a grocery or market commerce domain. The repository currently contains eight independently buildable services, shared local infrastructure through Docker Compose, Kong Gateway for local edge routing, and GitHub Actions workflows for CI, container publication, and environment deployments.
 
 ## Services
 
@@ -8,6 +8,7 @@ Market Basket Platform is a Spring Boot microservice system for a grocery or mar
 | --- | ---: | --- |
 | `auth-service` | 8080 | User registration, login, JWT access tokens, refresh-token rotation, logout, Google OAuth2 entry points, and JWKS publication. |
 | `customer-service` | 8081 | Customer bounded context scaffold. |
+| `seller-service` | 8087 | Seller onboarding, store profile, staff membership, and seller operations scaffold. |
 | `catalog-service` | 8082 | Product catalog bounded context scaffold. |
 | `subscription-service` | 8083 | Subscription bounded context scaffold. |
 | `order-service` | 8084 | Order bounded context scaffold. |
@@ -40,6 +41,8 @@ Useful local endpoints:
 
 - Auth health: `http://localhost:8080/actuator/health`
 - Auth JWKS: `http://localhost:8080/.well-known/jwks.json`
+- Kong Gateway: `http://localhost:8000`
+- Auth JWKS through Kong: `http://localhost:8000/.well-known/jwks.json`
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3000`
 

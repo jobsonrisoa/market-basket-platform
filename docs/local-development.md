@@ -23,7 +23,9 @@ This starts:
 - Redis on `localhost:6379`
 - Zookeeper on `localhost:2181`
 - Kafka on `localhost:9092`
-- Services on ports `8080` through `8086`
+- Kong Gateway on `localhost:8000`
+- Kong Admin API on `localhost:8001`
+- Services on ports `8080` through `8087`
 - Prometheus on `localhost:9090`
 - Grafana on `localhost:3000`
 
@@ -77,6 +79,7 @@ Repeat per service as needed:
 
 - `services/auth-service`
 - `services/customer-service`
+- `services/seller-service`
 - `services/catalog-service`
 - `services/subscription-service`
 - `services/order-service`
@@ -101,7 +104,7 @@ Auth variables:
 
 | Variable | Default |
 | --- | --- |
-| `AUTH_JWT_ISSUER` | `http://localhost:8080` |
+| `AUTH_JWT_ISSUER` | `http://localhost:8000` |
 | `AUTH_JWT_AUDIENCE` | `market-basket-platform` |
 | `AUTH_JWT_KEY_ID` | `local-dev-key` |
 | `AUTH_JWT_ACCESS_TOKEN_TTL` | `15m` |
@@ -113,6 +116,7 @@ Auth variables:
 
 - `market_auth`
 - `market_customer`
+- `market_seller`
 - `market_catalog`
 - `market_subscription`
 - `market_order`

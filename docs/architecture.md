@@ -2,7 +2,7 @@
 
 ## Overview
 
-Market Basket Platform is organized as a microservice backend. Each service is independently buildable, containerized, and configured through environment variables. Docker Compose provides a local and simple server runtime with PostgreSQL, MongoDB, Redis, Kafka, Prometheus, and Grafana.
+Market Basket Platform is organized as a microservice backend. Each service is independently buildable, containerized, and configured through environment variables. Docker Compose provides a local and simple server runtime with PostgreSQL, MongoDB, Redis, Kafka, Kong Gateway, Prometheus, and Grafana.
 
 The current implemented domain depth is concentrated in `auth-service`. The remaining services are Spring Boot bounded-context scaffolds with shared platform dependencies and deployment wiring.
 
@@ -16,6 +16,7 @@ The current implemented domain depth is concentrated in `auth-service`. The rema
 | Persistence | Spring Data JPA, PostgreSQL |
 | Cache/session dependency | Redis |
 | Messaging | Kafka with Zookeeper |
+| API gateway | Kong Gateway in DB-less mode |
 | Security | Spring Security, OAuth2 resource server/client, JWT |
 | Tests | JUnit, Spring Boot Test, Testcontainers |
 | Formatting | Spotless Maven plugin |
@@ -30,6 +31,7 @@ The current implemented domain depth is concentrated in `auth-service`. The rema
 | --- | --- | --- |
 | `auth-service` | `market_auth` | Identity, credentials, access tokens, refresh tokens, OAuth2 login, JWKS, auth events. |
 | `customer-service` | `market_customer` | Customer profile and customer account domain. |
+| `seller-service` | `market_seller` | Seller onboarding, store profile, staff membership, and seller operations. |
 | `catalog-service` | `market_catalog` | Product catalog domain. |
 | `subscription-service` | `market_subscription` | Subscription plans and recurring customer relationships. |
 | `order-service` | `market_order` | Order placement and lifecycle. |
@@ -41,8 +43,9 @@ The current implemented domain depth is concentrated in `auth-service`. The rema
 - PostgreSQL 16 hosts one database per service in local Compose.
 - Redis 7 is available to every service.
 - Kafka 7.6.1 is available to every service on `kafka:29092` inside Compose and `localhost:9092` on the host.
+- Kong Gateway fronts public HTTP APIs on `localhost:8000` with declarative DB-less configuration from `infra/kong/kong.yml`.
 - MongoDB 7 is provisioned, but no current service configuration in this repo consumes it.
-- Prometheus and Grafana containers are provisioned for monitoring, but Prometheus scrape configuration is not yet defined in this repository.
+- Prometheus and Grafana containers are provisioned for monitoring. Prometheus scrapes Spring Actuator metrics and Kong status metrics.
 
 ## Auth Service Internal Architecture
 
@@ -102,6 +105,7 @@ Each service has its own Dockerfile and image:
 
 - `market-auth-service`
 - `market-customer-service`
+- `market-seller-service`
 - `market-catalog-service`
 - `market-subscription-service`
 - `market-order-service`
@@ -112,7 +116,6 @@ Images are tagged with both the Git SHA and `main` on pushes to `main`. Deployme
 
 ## Known Architecture Gaps
 
-- No API gateway or edge routing layer is defined yet.
 - No centralized service discovery is defined.
 - No database migration tool is configured yet.
 - No distributed tracing is configured yet.

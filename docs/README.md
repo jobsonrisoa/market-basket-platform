@@ -19,6 +19,7 @@ This directory is the source of truth for product, architecture, delivery, and o
 market-basket-platform
   .github/workflows     GitHub Actions CI, image publishing, and deployment
   docs                  Product, architecture, delivery, and operations docs
+  infra/kong            Kong Gateway declarative configuration
   infra/postgres        Local database bootstrap SQL
   services              Spring Boot services
     auth-service
@@ -27,6 +28,7 @@ market-basket-platform
     inventory-service
     notification-service
     order-service
+    seller-service
     subscription-service
   docker-compose.yml    Local and simple server orchestration
 ```

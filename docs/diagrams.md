@@ -9,11 +9,13 @@ flowchart LR
   shopper[Shopper or Client App]
   operator[Store Operator]
   platform[Market Basket Platform]
+  gateway[Kong Gateway]
   ghcr[GitHub Container Registry]
   deployHost[Docker Compose Host]
 
-  shopper -->|HTTPS/API requests| platform
-  operator -->|Back-office API requests| platform
+  shopper -->|HTTPS/API requests| gateway
+  operator -->|Back-office API requests| gateway
+  gateway --> platform
   platform -->|Publishes images| ghcr
   ghcr -->|Images pulled by deploy| deployHost
 ```
@@ -23,10 +25,12 @@ flowchart LR
 ```mermaid
 flowchart TB
   client[Client Applications]
+  kong[Kong Gateway :8000]
 
   subgraph services[Spring Boot Services]
     auth[auth-service :8080]
     customer[customer-service :8081]
+    seller[seller-service :8087]
     catalog[catalog-service :8082]
     subscription[subscription-service :8083]
     order[order-service :8084]
@@ -46,15 +50,19 @@ flowchart TB
     grafana[Grafana :3000]
   end
 
-  client --> auth
-  client --> customer
-  client --> catalog
-  client --> subscription
-  client --> order
-  client --> inventory
+  client --> kong
+  kong --> auth
+  kong --> customer
+  kong --> seller
+  kong --> catalog
+  kong --> subscription
+  kong --> order
+  kong --> inventory
+  kong --> notification
 
   auth --> postgres
   customer --> postgres
+  seller --> postgres
   catalog --> postgres
   subscription --> postgres
   order --> postgres
@@ -63,6 +71,7 @@ flowchart TB
 
   auth --> redis
   customer --> redis
+  seller --> redis
   catalog --> redis
   subscription --> redis
   order --> redis
@@ -71,6 +80,7 @@ flowchart TB
 
   auth --> kafka
   customer --> kafka
+  seller --> kafka
   catalog --> kafka
   subscription --> kafka
   order --> kafka
@@ -78,6 +88,7 @@ flowchart TB
   notification --> kafka
 
   prometheus -. scrape .-> services
+  prometheus -. scrape .-> kong
   grafana --> prometheus
 ```
 

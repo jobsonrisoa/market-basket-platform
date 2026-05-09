@@ -1,0 +1,79 @@
+_format_version: "3.0"
+_transform: true
+
+plugins:
+  - name: correlation-id
+    config:
+      header_name: X-Correlation-Id
+      generator: uuid
+      echo_downstream: true
+  - name: prometheus
+
+services:
+  - name: auth-service
+    url: http://auth-service:8080
+    routes:
+      - name: auth-api
+        paths:
+          - /auth
+        strip_path: false
+      - name: auth-jwks
+        paths:
+          - /.well-known/jwks.json
+        strip_path: false
+
+  - name: customer-service
+    url: http://customer-service:8081
+    routes:
+      - name: customer-api
+        paths:
+          - /customers
+        strip_path: false
+
+  - name: seller-service
+    url: http://seller-service:8087
+    routes:
+      - name: seller-api
+        paths:
+          - /sellers
+        strip_path: false
+
+  - name: catalog-service
+    url: http://catalog-service:8082
+    routes:
+      - name: catalog-api
+        paths:
+          - /catalog
+        strip_path: false
+
+  - name: subscription-service
+    url: http://subscription-service:8083
+    routes:
+      - name: subscription-api
+        paths:
+          - /subscriptions
+        strip_path: false
+
+  - name: order-service
+    url: http://order-service:8084
+    routes:
+      - name: order-api
+        paths:
+          - /orders
+        strip_path: false
+
+  - name: inventory-service
+    url: http://inventory-service:8085
+    routes:
+      - name: inventory-api
+        paths:
+          - /inventory
+        strip_path: false
+
+  - name: notification-service
+    url: http://notification-service:8086
+    routes:
+      - name: notification-api
+        paths:
+          - /notifications
+        strip_path: false

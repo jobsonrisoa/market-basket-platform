@@ -22,6 +22,8 @@ jobs:
             path: services/auth-service
           - service: customer-service
             path: services/customer-service
+          - service: seller-service
+            path: services/seller-service
           - service: catalog-service
             path: services/catalog-service
           - service: subscription-service

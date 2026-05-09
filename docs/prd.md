@@ -2,14 +2,15 @@
 
 ## Product Summary
 
-Market Basket Platform is a backend platform for a grocery or market commerce experience. It is designed as a set of independently deployable Spring Boot services with clear bounded contexts for identity, customers, catalog, subscriptions, orders, inventory, and notifications.
+Market Basket Platform is a backend platform for a grocery subscription marketplace. It is designed as a set of independently deployable Spring Boot services with clear bounded contexts for identity, customers, sellers, catalog, subscriptions, orders, inventory, and notifications.
 
 The first implementation focus is the authentication foundation: users can register, log in, receive JWT access tokens, rotate refresh tokens, log out, and authenticate downstream requests through published JWKS keys.
 
 ## Target Users
 
-- Shoppers who need secure account access and a reliable ordering experience.
-- Store operators who need accurate catalog, stock, order, and customer information.
+- Shoppers who need secure account access and subscribe to recurring grocery baskets of fruits, vegetables, and other fresh market products.
+- Sellers who manage stores, catalog items, stock availability, prices, fulfillment windows, and order handoff.
+- Platform operators who review sellers, manage disputes, monitor service health, and support customers.
 - Backend engineers who need independently testable and deployable service boundaries.
 - Operators who need reproducible deployments, health checks, and observable services.
 
@@ -24,7 +25,7 @@ The first implementation focus is the authentication foundation: users can regis
 ## Non-Goals
 
 - This repository does not currently include a frontend application.
-- This repository does not currently include an API gateway.
+- This repository includes a local Kong Gateway configuration for public HTTP API routing.
 - This repository does not currently define Kubernetes manifests, Helm charts, or Terraform.
 - Most non-auth services are currently scaffolds and should not be treated as feature-complete domain implementations.
 
@@ -60,7 +61,7 @@ The first implementation focus is the authentication foundation: users can regis
 - Inventory reservation and stock adjustment.
 - Notification delivery through email, SMS, or push providers.
 - API gateway, service-to-service authorization, and centralized request tracing.
-- Database migrations with Flyway or Liquibase.
+- Database migrations with Flyway.
 - Production-grade dashboards and alerts.
 
 ## Functional Requirements
@@ -88,6 +89,8 @@ The first implementation focus is the authentication foundation: users can regis
 - Observability: services expose Actuator health and Prometheus metrics.
 - Operability: deployments should be repeatable with `docker compose pull` and `docker compose up -d --remove-orphans`.
 - Testability: services include Testcontainers dependencies for PostgreSQL and Kafka integration testing.
+- Event contracts: Kafka producers and consumers must publish versioned event types and validate payload compatibility before merge.
+- Database safety: production schema changes must be versioned, reviewed, repeatable, and executed by the owning service deployment.
 
 ## Success Metrics
 
@@ -97,10 +100,226 @@ The first implementation focus is the authentication foundation: users can regis
 - Auth registration and login flows pass automated tests.
 - Health endpoints stay available after deployment.
 
-## Open Questions
+## Decisions and Implementation Plans
 
-- Which API gateway or ingress layer will front the services?
-- Which frontend or mobile clients will consume the auth flows?
-- Which event schema registry or contract testing approach should govern Kafka topics?
-- Which migration tool should own production database schema changes?
-- What are the exact catalog, inventory, subscription, order, and notification domain workflows?
+### API Gateway and Ingress
+
+Decision: use Kong Gateway as the open-source API gateway in front of all public HTTP APIs.
+
+Rationale:
+
+- Kong has a mature open-source gateway, Docker support, JWT/OIDC-related plugins, rate limiting, request logging, Prometheus metrics, and a clear path from local Compose to Kubernetes ingress later.
+- The platform already exposes multiple service ports locally. Kong should become the single public entry point while internal service ports remain private in production.
+- Gateway configuration can be managed declaratively with Kong DB-less mode for local/dev, then promoted to Kong Ingress Controller or decK-managed configuration for Kubernetes.
+
+Initial route plan:
+
+| Public route | Service | Notes |
+| --- | --- | --- |
+| `/auth/**` | `auth-service` | Registration, login, refresh, logout, JWKS, OAuth callbacks. |
+| `/customers/**` | `customer-service` | Shopper profile, addresses, preferences, payment profile references. |
+| `/sellers/**` | `seller-service` | Seller onboarding, store profile, staff membership, compliance status, and store operations. |
+| `/catalog/**` | `catalog-service` | Public browsing plus seller-owned product management. |
+| `/subscriptions/**` | `subscription-service` | Shopper basket plans, recurrence rules, skips, pauses, renewals. |
+| `/orders/**` | `order-service` | Checkout, order status, fulfillment tracking, cancellations. |
+| `/inventory/**` | `inventory-service` | Seller/internal stock management and reservation APIs. |
+| `/notifications/**` | `notification-service` | Internal/admin notification templates and preferences. |
+
+Implementation status and plan:
+
+1. Added a `kong` service to `docker-compose.yml` and exposed it on local port `8000`.
+2. Added `infra/kong/kong.yml` with DB-less declarative services, routes, correlation IDs, and Prometheus plugin configuration.
+3. Keep JWT validation in downstream services first while Kong handles routing, correlation IDs, and observability.
+4. Use auth-service JWKS as the source of token validation when Kong-side JWT/OIDC validation is finalized.
+5. Add gateway smoke tests that call the public JWKS route through Kong and Kong's status listener.
+6. Configure public routes to require JWT except explicitly public auth endpoints and public catalog browsing once the Kong JWT/OIDC approach is chosen.
+7. Keep direct service ports for local debugging only; production compose or Kubernetes exposure should publish only Kong and observability/admin endpoints intentionally.
+
+### Client Applications
+
+Decision: design the backend for three client surfaces, even though this repository does not implement them yet.
+
+| Client | Primary users | Auth flow |
+| --- | --- | --- |
+| Shopper mobile app | Grocery subscribers | Email/password, refresh-token rotation, future Google OAuth2. |
+| Seller web portal | Store owners and staff | Email/password, MFA later, seller-scoped permissions. |
+| Platform admin console | Operations and support team | Admin login, stricter RBAC, audit logging, MFA before production. |
+
+Near-term backend requirements:
+
+- Auth responses should expose roles, account profile, and permissions clearly enough for clients to render role-specific navigation.
+- Refresh-token rotation should support mobile and browser sessions independently.
+- Logout-all must invalidate every refresh-token family for a user.
+- Admin/seller actions must emit audit-friendly domain events.
+
+### RBAC and Account Profiles
+
+Decision: extend RBAC from a simple `CUSTOMER`/`ADMIN` model into marketplace-aware roles while preserving `CUSTOMER` as the default public registration role.
+
+Recommended roles:
+
+| Role | Purpose |
+| --- | --- |
+| `CUSTOMER` | Shopper who manages their own profile, subscriptions, baskets, and orders. |
+| `SELLER_OWNER` | Owns one or more seller stores and can manage store profile, staff, catalog, stock, pricing, and fulfillment settings. |
+| `SELLER_STAFF` | Operates catalog, stock, and order fulfillment for assigned seller stores with narrower permissions. |
+| `SUPPORT_AGENT` | Platform support role for read-heavy customer/order assistance and limited operational actions. |
+| `ADMIN` | Platform administrator for marketplace operations, seller review, and broad management actions. |
+| `SUPER_ADMIN` | Break-glass/platform owner role that can grant or revoke administrative roles and change security-sensitive configuration. |
+
+Recommended account profiles:
+
+| Account profile | Meaning |
+| --- | --- |
+| `CUSTOMER` | Individual shopper account. |
+| `SELLER` | Seller/store account linked to one or more users. |
+| `PLATFORM` | Internal platform staff account. |
+
+RBAC implementation plan:
+
+1. Add `SELLER_OWNER`, `SELLER_STAFF`, `SUPPORT_AGENT`, and `SUPER_ADMIN` to the auth domain role model.
+2. Replace broad `hasRole('ADMIN')` checks with permission-level checks for sensitive actions.
+3. Add permissions such as `SELLER_CATALOG_MANAGE`, `SELLER_INVENTORY_MANAGE`, `SELLER_ORDER_FULFILL`, `CUSTOMER_SUBSCRIPTION_MANAGE_OWN`, `PLATFORM_SELLER_REVIEW`, `AUTH_USER_ROLE_ASSIGN`, and `AUTH_USER_ROLE_REVOKE`.
+4. Emit role-change events with actor, target user, changed role, and affected account profile.
+5. Add seller membership records outside auth so authorization can combine JWT permissions with resource ownership checks, for example "user has `SELLER_STAFF` and belongs to seller store X."
+6. Keep first-admin bootstrap operational and auditable; only `SUPER_ADMIN` should grant `ADMIN` or `SUPER_ADMIN` after bootstrap.
+
+### Kafka Event Contracts and Testing
+
+Decision to make next: choose the event governance approach after an AI specialist review of repo constraints and trade-offs.
+
+Current recommendation: start with consumer-driven contract tests plus Testcontainers Kafka, then add a schema registry when event volume and cross-team coordination justify the operational cost.
+
+Specialist recommendation for this repository: choose JSON Schema plus contract tests first. The current services already publish JSON strings through `KafkaTemplate<String, String>`, Docker Compose runs Kafka without Schema Registry, and there are not yet active cross-service Kafka consumers. Avro or Protobuf with Schema Registry should remain later options when event contracts become shared by multiple production consumers.
+
+Option comparison:
+
+| Option | Fit | Concerns |
+| --- | --- | --- |
+| JSON Schema plus contract tests | Best first step because it matches the current JSON outbox implementation and adds low infrastructure overhead. | Compatibility discipline lives in tests and review conventions, not broker-enforced registry policy. |
+| Avro plus Schema Registry | Good later for high-volume, strongly governed shared events. | Adds Schema Registry, serializers, code generation, compatibility policy, and more local/CI/prod infrastructure. |
+| Protobuf plus Schema Registry | Good later for polyglot consumers, strict typed contracts, or alignment with gRPC-style APIs. | More migration friction from the current JSON model and extra care around defaults and optional fields. |
+
+Specialist review brief:
+
+- Analyze the existing Spring Boot services, outbox event implementation, Docker Compose Kafka setup, and Testcontainers dependencies.
+- Compare three options: JSON Schema plus contract tests, Avro plus Schema Registry, and Protobuf plus Schema Registry.
+- Identify risks around local development complexity, CI time, backward compatibility, event versioning, developer ergonomics, and production operability.
+- Recommend a first milestone that catches breaking event changes before merge without overbuilding the platform.
+
+Repo-specific specialist concerns:
+
+- `KafkaOutboxPublisher` builds the final event envelope with string formatting. Move envelope serialization to Jackson or another structured JSON writer before event payloads become more complex.
+- `OutboxEvent` currently builds nested payload JSON with string formatting. Contract tests must validate both the envelope and the nested payload shape.
+- `KafkaOutboxPublisher` currently sends each event to a topic named exactly like the event type, for example `auth.user.registered.v1`. Decide before production whether to keep one-topic-per-event-type or move to domain topics such as `auth.events` with `eventType` inside the envelope.
+- Existing outbox tests assert event names and loose payload containment, but they do not yet prove schema compatibility, broker publishing, or consumer behavior.
+- Testcontainers Kafka dependencies already exist, but Kafka container tags should be pinned before Kafka integration tests become CI-critical.
+
+Concerns the specialist should explicitly evaluate:
+
+| Concern | Why it matters |
+| --- | --- |
+| Backward compatibility | Consumers must survive producer deployments that add optional fields or introduce new event versions. |
+| Runtime dependencies | Schema Registry adds infrastructure that must run locally, in CI, and in production. |
+| Contract ownership | Each topic needs a clear owner and review process before other services depend on it. |
+| Event naming | Event types should stay explicit and versioned, for example `auth.user.registered.v1`. |
+| Payload validation | Tests should validate required fields, enum values, timestamps, IDs, and correlation metadata. |
+| Outbox reliability | Publishing tests must prove database writes and event writes stay atomic from the service point of view. |
+| Consumer idempotency | Consumers must handle duplicate events and retries safely. |
+| Observability | Events should carry correlation IDs and enough metadata for tracing across services. |
+
+Baseline event-contract plan before the final decision:
+
+1. Create a top-level `contracts/events` directory with one folder per domain.
+2. Store versioned JSON Schema files and examples for current events, starting with `auth.user.registered.v1`, `auth.session.login_succeeded.v1`, and `auth.session.login_failed.v1`.
+3. Add producer tests in `auth-service` that generate real `OutboxEvent` instances, serialize the final Kafka envelope, and validate it against the schema.
+4. Refactor envelope and payload serialization to structured JSON before adding more event fields.
+5. Decide the topic strategy: event-type topics now versus domain topics such as `auth.events`.
+6. Add consumer contract tests in each consuming service using recorded example events.
+7. Add Testcontainers Kafka integration tests for at least one publish/consume path per workflow.
+8. Pin Kafka Testcontainers image versions before these tests become CI gates.
+9. Require compatibility checks in CI: additive optional fields are allowed in the same version; removed fields, renamed fields, type changes, and semantic changes require a new event version.
+10. Revisit Schema Registry when two or more services actively consume the same topic in production or when event evolution becomes difficult to review manually.
+
+### Production Database Migrations
+
+Decision: use Flyway as the production migration tool for all PostgreSQL-backed Spring Boot services.
+
+Rationale:
+
+- Flyway is simple, widely used with Spring Boot, and fits service-owned relational schemas well.
+- Versioned SQL migrations are easy to review in PRs and keep close to the service that owns the schema.
+- The project is still early; Liquibase's richer change model is not needed yet.
+
+Implementation plan:
+
+1. Add `flyway-core` to each service that owns PostgreSQL tables.
+2. Store migrations under `src/main/resources/db/migration` in each service.
+3. Use service-specific migration histories because each service owns its own database, for example `market_auth`, `market_catalog`, and `market_order`.
+4. Convert any JPA auto-DDL behavior to validation-only in production; migrations must create and update production schema.
+5. Run Flyway automatically on service startup in dev and CI.
+6. For production, run migrations as a controlled release step before app rollout or as startup migrations only when deployment orchestration guarantees one migrator at a time.
+7. Add rollback practice through forward-only fix migrations rather than destructive down migrations.
+8. Require migration review for locking risk, data backfills, nullable-to-not-null transitions, indexes on large tables, and backward compatibility during rolling deploys.
+
+### Marketplace Domain Workflows
+
+Decision: model the product as a grocery subscription marketplace where shoppers subscribe to recurring produce baskets and sellers fulfill orders for fresh products.
+
+Catalog workflow:
+
+1. Seller creates a store profile and submits it for platform review.
+2. Platform approves the seller and enables catalog publishing.
+3. Seller creates products with category, unit, package size, price, photos, seasonal availability, and quality notes.
+4. Seller groups products into basket-eligible items, optional add-ons, and one-time purchase items.
+5. Catalog publishes product and price changes as events for subscription, order, and search/read-model consumers.
+
+Inventory workflow:
+
+1. Seller records available stock by product, harvest/arrival date, quality grade, and fulfillment window.
+2. Inventory service exposes availability to catalog and subscription planning.
+3. Checkout or subscription renewal reserves stock for a short window.
+4. Order confirmation commits the reservation.
+5. Cancellation, payment failure, or reservation expiry releases stock.
+6. Fulfillment completion decrements final stock and records shrinkage or substitutions when needed.
+
+Subscription workflow:
+
+1. Shopper chooses a basket plan, delivery/pickup cadence, seller or marketplace-curated basket, address, preferences, allergies/dislikes, and substitution rules.
+2. Subscription service schedules renewal windows and emits upcoming-renewal events.
+3. Before each renewal, the shopper can skip, pause, change basket size, add one-time items, or edit preferences.
+4. Renewal creates a draft order from plan rules, available catalog, and inventory constraints.
+5. Payment authorization converts the draft into a confirmed order.
+6. Failed payment pauses or retries the renewal according to policy.
+
+Order workflow:
+
+1. Shopper checks out directly or receives a generated subscription order.
+2. Order service prices items, delivery fees, discounts, and seller split details.
+3. Order service requests inventory reservation.
+4. Payment authorization confirms the order.
+5. Seller accepts, packs, substitutes if allowed, and marks ready for pickup or delivery.
+6. Shopper receives status updates.
+7. Completion closes the order, emits settlement/analytics events, and optionally requests feedback.
+8. Cancellation rules depend on order state, fulfillment window, and seller policy.
+
+Notification workflow:
+
+1. Services emit notification-intent events such as registration confirmation, upcoming renewal, payment failed, order confirmed, seller accepted order, substitution requested, ready for pickup, out for delivery, and delivered.
+2. Notification service resolves user preferences, channel eligibility, templates, locale, and rate limits.
+3. Notification service sends email first for MVP; SMS and push can be added later.
+4. Delivery attempts, failures, provider IDs, and suppression decisions are stored for audit and support.
+
+Cross-service events to define first:
+
+| Event | Producer | Consumers |
+| --- | --- | --- |
+| `auth.user.registered.v1` | `auth-service` | `customer-service`, `notification-service` |
+| `auth.user.role_assigned.v1` | `auth-service` | `customer-service`, audit/read models |
+| `seller.approved.v1` | `seller-service` | `catalog-service`, `notification-service` |
+| `catalog.product.published.v1` | `catalog-service` | `subscription-service`, `order-service`, search/read models |
+| `inventory.stock_reserved.v1` | `inventory-service` | `order-service` |
+| `inventory.reservation_released.v1` | `inventory-service` | `order-service` |
+| `subscription.renewal_due.v1` | `subscription-service` | `order-service`, `notification-service` |
+| `order.confirmed.v1` | `order-service` | `inventory-service`, `notification-service`, seller read models |
+| `order.fulfillment_status_changed.v1` | `order-service` | `notification-service`, customer/seller read models |

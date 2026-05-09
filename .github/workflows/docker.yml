@@ -26,6 +26,9 @@ jobs:
           - service: customer-service
             image: market-customer-service
             path: services/customer-service
+          - service: seller-service
+            image: market-seller-service
+            path: services/seller-service
           - service: catalog-service
             image: market-catalog-service
             path: services/catalog-service

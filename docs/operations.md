@@ -9,6 +9,7 @@ Common service dependencies:
 - PostgreSQL: service-owned databases under one local PostgreSQL instance.
 - Redis: available to every service.
 - Kafka: available to every service.
+- Kong Gateway: public local entry point for HTTP APIs.
 - Prometheus: scrapes service Actuator metrics from `infra/prometheus/prometheus.yml`.
 - Grafana: provisioned with a Prometheus datasource and the `Market Services` dashboard.
 - Sentry: optional error and tracing sink configured by environment variables.
@@ -33,11 +34,19 @@ GET http://localhost:8080/actuator/health
 Other services follow the same Actuator path on their ports:
 
 - Customer: `8081`
+- Seller: `8087`
 - Catalog: `8082`
 - Subscription: `8083`
 - Order: `8084`
 - Inventory: `8085`
 - Notification: `8086`
+
+Gateway checks:
+
+```http
+GET http://localhost:8000/.well-known/jwks.json
+GET http://localhost:8100/status
+```
 
 ## Metrics
 
@@ -54,11 +63,14 @@ http://localhost:9090
 ```
 
 Prometheus scrapes every service at `/actuator/prometheus` through Docker Compose DNS. The scrape targets are defined in `infra/prometheus/prometheus.yml`.
+Kong metrics are exposed from the Kong status listener and scraped by Prometheus.
 
 Useful local checks:
 
 ```bash
 curl http://localhost:8080/actuator/prometheus
+curl http://localhost:8000/.well-known/jwks.json
+curl http://localhost:8100/status
 curl http://localhost:9090/-/ready
 ```
 
@@ -179,7 +191,7 @@ Production should define backups for PostgreSQL data volumes before handling rea
 - Route Prometheus alerts through Alertmanager.
 - Add dashboard definitions for database, Kafka, and Redis health.
 - Pin production Compose deployments to immutable image tags.
-- Add HTTPS and an ingress or API gateway.
+- Add HTTPS in front of Kong Gateway.
 - Add centralized structured logs.
 - Add secret management outside plain environment files.
 - Add rate limiting for auth endpoints.

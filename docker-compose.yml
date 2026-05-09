@@ -94,7 +94,7 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8080}
+      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8000}
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-market-basket-platform}
       AUTH_JWT_KEY_ID: ${AUTH_JWT_KEY_ID:-local-dev-key}
       AUTH_JWT_ACCESS_TOKEN_TTL: ${AUTH_JWT_ACCESS_TOKEN_TTL:-15m}
@@ -126,6 +126,31 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
     ports:
       - "8081:8081"
+
+  seller-service:
+    image: ${REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-jobson}/market-seller-service:${IMAGE_TAG:-local}
+    build:
+      context: ./services/seller-service
+    container_name: market-seller-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      <<: *observability-env
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: 8087
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/market_seller
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-market}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-market}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    ports:
+      - "8087:8087"
 
   catalog-service:
     image: ${REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-jobson}/market-catalog-service:${IMAGE_TAG:-local}
@@ -251,6 +276,41 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
     ports:
       - "8086:8086"
+
+  kong:
+    image: kong:3.8
+    container_name: market-kong
+    depends_on:
+      - auth-service
+      - customer-service
+      - seller-service
+      - catalog-service
+      - subscription-service
+      - order-service
+      - inventory-service
+      - notification-service
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_STATUS_LISTEN: 0.0.0.0:8100
+      KONG_PLUGINS: bundled
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8100:8100"
+    volumes:
+      - ./infra/kong/kong.yml:/kong/declarative/kong.yml:ro
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   prometheus:
     image: prom/prometheus:v2.54.1
