@@ -77,6 +77,7 @@ The first implementation focus is the authentication foundation: users can regis
 | Auth | Publish auth domain events through an outbox. | Implemented in `auth-service`. |
 | Auth | Expose marketplace roles and permissions in auth responses and JWT claims. | Implemented in `auth-service`. |
 | Auth | Allow authorized admins to assign and revoke roles, suspend users, and reactivate users. | Implemented in `auth-service`. |
+| Seller | Create seller stores and manage owner/staff memberships. | Implemented in `seller-service`. |
 | Platform | Build and test every service on PRs to `main`. | Implemented through GitHub Actions. |
 | Platform | Validate every service Flyway migration set against PostgreSQL on PRs to `main`. | Implemented through GitHub Actions. |
 | Platform | Publish service images on `main`. | Implemented through GitHub Actions. |
@@ -279,7 +280,6 @@ The repository is currently strongest in the auth and platform foundation layers
 | Candidate | Why now | Main trade-off |
 | --- | --- | --- |
 | Kafka event-contract hardening | Builds on the first `auth.user.registered.v1` contract and reduces cross-service integration risk before consumers appear. | More test and schema discipline before there is much event volume. |
-| Seller membership domain foundation | Unlocks marketplace authorization beyond global roles. | Starts domain modeling work before customer/catalog/order flows exist. |
 | Deployment immutability and smoke tests | Reduces release risk by deploying SHA tags and verifying runtime health after rollout. | Improves operations without adding product-facing capability. |
 
 ### Marketplace Domain Workflows

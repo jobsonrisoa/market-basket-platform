@@ -210,3 +210,79 @@ The auth service includes `AuthExceptionHandler` for translating application exc
 - Refresh tokens are opaque values and should be handled as secrets.
 - Login and refresh responses include refresh tokens in both response body data and an HTTP-only cookie.
 - The cookie is marked `Secure`, so browser-based local testing over plain HTTP may need direct request-body refresh handling unless local HTTPS is introduced.
+
+## Seller Service
+
+Base URL in local Compose: `http://localhost:8087`
+
+These endpoints intentionally accept explicit user ids until service-to-service authorization is implemented.
+
+### Create Seller
+
+```http
+POST /sellers
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "name": "Fresh Market",
+  "ownerUserId": "user-uuid"
+}
+```
+
+Response: `201 Created`
+
+Creates a seller store and an active `OWNER` membership for the owner user.
+
+### Get Seller
+
+```http
+GET /sellers/{sellerId}
+```
+
+Response: `200 OK`
+
+Returns the seller store id, name, owner user id, and creation timestamp.
+
+### Add Seller Member
+
+```http
+POST /sellers/{sellerId}/members
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "userId": "user-uuid",
+  "role": "STAFF"
+}
+```
+
+Response: `201 Created`
+
+Creates or reactivates a seller membership as `OWNER` or `STAFF`.
+
+### List Seller Members
+
+```http
+GET /sellers/{sellerId}/members
+```
+
+Response: `200 OK`
+
+Returns active and removed memberships for the seller.
+
+### Remove Seller Member
+
+```http
+DELETE /sellers/{sellerId}/members/{userId}
+```
+
+Response: `204 No Content`
+
+Marks the membership as `REMOVED`.

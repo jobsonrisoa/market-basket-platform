@@ -4,7 +4,7 @@
 
 Market Basket Platform is organized as a microservice backend. Each service is independently buildable, containerized, and configured through environment variables. Docker Compose provides a local and simple server runtime with PostgreSQL, MongoDB, Redis, Kafka, Kong Gateway, Prometheus, and Grafana.
 
-The current implemented domain depth is concentrated in `auth-service`. The remaining services are Spring Boot bounded-context scaffolds with shared platform dependencies and deployment wiring.
+The current implemented domain depth is concentrated in `auth-service`, with the first seller store and membership foundation implemented in `seller-service`. The remaining services are Spring Boot bounded-context scaffolds with shared platform dependencies and deployment wiring.
 
 ## Technology Stack
 
@@ -31,7 +31,7 @@ The current implemented domain depth is concentrated in `auth-service`. The rema
 | --- | --- | --- |
 | `auth-service` | `market_auth` | Identity, credentials, access tokens, refresh tokens, OAuth2 login, JWKS, auth events. |
 | `customer-service` | `market_customer` | Customer profile and customer account domain. |
-| `seller-service` | `market_seller` | Seller onboarding, store profile, staff membership, and seller operations. |
+| `seller-service` | `market_seller` | Seller store profile and staff membership foundation. |
 | `catalog-service` | `market_catalog` | Product catalog domain. |
 | `subscription-service` | `market_subscription` | Subscription plans and recurring customer relationships. |
 | `order-service` | `market_order` | Order placement and lifecycle. |
