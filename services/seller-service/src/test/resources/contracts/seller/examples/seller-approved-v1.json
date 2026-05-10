@@ -1,0 +1,15 @@
+{
+  "eventId": "11111111-1111-4111-8111-111111111111",
+  "eventType": "seller.approved.v1",
+  "version": 1,
+  "occurredAt": "2026-05-10T13:00:00Z",
+  "correlationId": "seller-review-123",
+  "payload": {
+    "sellerId": "22222222-2222-4222-8222-222222222222",
+    "name": "Fresh Market",
+    "ownerUserId": "33333333-3333-4333-8333-333333333333",
+    "approvalStatus": "APPROVED",
+    "reviewedByUserId": "44444444-4444-4444-8444-444444444444",
+    "reviewedAt": "2026-05-10T13:00:00Z"
+  }
+}

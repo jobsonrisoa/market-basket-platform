@@ -1,0 +1,13 @@
+{
+  "eventId": "11111111-1111-4111-8111-111111111111",
+  "eventType": "auth.user.role_assigned.v1",
+  "version": 1,
+  "occurredAt": "2026-05-10T12:30:00Z",
+  "correlationId": "auth-role-123",
+  "payload": {
+    "userId": "22222222-2222-4222-8222-222222222222",
+    "role": "SELLER_OWNER",
+    "accountProfile": "SELLER",
+    "changedBy": "33333333-3333-4333-8333-333333333333"
+  }
+}
