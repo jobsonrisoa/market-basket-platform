@@ -6,6 +6,11 @@ on:
     branches: [main]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Immutable image tag to deploy, usually a Git SHA"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -31,7 +36,11 @@ jobs:
             git fetch origin main
             git checkout main
             git pull --ff-only origin main
+            export IMAGE_TAG="${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.image_tag }}"
             ./scripts/run-migrations.sh
             docker compose pull
             docker compose up -d --remove-orphans
             docker compose ps
+            curl --fail --retry 12 --retry-delay 5 http://localhost:8080/actuator/health
+            curl --fail --retry 12 --retry-delay 5 http://localhost:8000/.well-known/jwks.json
+            curl --fail --retry 12 --retry-delay 5 http://localhost:9090/-/ready

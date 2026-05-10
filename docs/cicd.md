@@ -8,8 +8,8 @@ The repository uses GitHub Actions for pull request validation, image publicatio
 | --- | --- | --- | --- |
 | CI | `.github/workflows/ci.yml` | Pull request to `main`, push to `main`, manual dispatch | Validate migrations, format check, test, package, upload reports and jars for every service. |
 | Docker Images | `.github/workflows/docker.yml` | Push to `main`, manual dispatch | Build and push every service image to GitHub Container Registry. |
-| Deploy Dev | `.github/workflows/deploy-dev.yml` | Successful Docker Images workflow on `main`, manual dispatch | Deploy the Compose stack to the `dev` environment over SSH. |
-| Deploy Prod | `.github/workflows/deploy-prod.yml` | Manual dispatch | Deploy the Compose stack to the `prod` environment over SSH. |
+| Deploy Dev | `.github/workflows/deploy-dev.yml` | Successful Docker Images workflow on `main`, manual dispatch | Deploy a specific image tag to the `dev` environment over SSH, then run smoke checks. |
+| Deploy Prod | `.github/workflows/deploy-prod.yml` | Manual dispatch | Deploy an explicit image tag to the `prod` environment over SSH, then run smoke checks. |
 
 ## CI Matrix
 
@@ -75,13 +75,19 @@ cd "$DEPLOY_PATH"
 git fetch origin main
 git checkout main
 git pull --ff-only origin main
+export IMAGE_TAG="<git-sha>"
 ./scripts/run-migrations.sh
 docker compose pull
 docker compose up -d --remove-orphans
 docker compose ps
+curl --fail --retry 12 --retry-delay 5 http://localhost:8080/actuator/health
+curl --fail --retry 12 --retry-delay 5 http://localhost:8000/.well-known/jwks.json
+curl --fail --retry 12 --retry-delay 5 http://localhost:9090/-/ready
 ```
 
 `scripts/run-migrations.sh` starts PostgreSQL, waits for health, creates any missing service databases, and runs each service's pinned Flyway runner with `migrate`, `validate`, and `info`. It never runs `clean`. The deployment runners allow `baselineOnMigrate` so environments that already had pre-Flyway schemas can adopt Flyway history; CI validation remains strict against fresh databases. Application startup migrations remain enabled as a safety net after the controlled pre-rollout migration step.
+
+Dev auto-deploy uses the Docker Images workflow head SHA as `IMAGE_TAG`. Manual dev and prod deployments require an `image_tag` input; production should use a Git SHA tag that was already published by the Docker Images workflow.
 
 Dev deploys automatically after the Docker Images workflow succeeds on `main`. Prod deploys manually and should be protected by the GitHub `prod` environment.
 
@@ -106,7 +112,7 @@ Recommended GitHub environment rules:
 
 ## Rollback
 
-The current workflow deploys the `main` image tag by default through Compose. For stronger rollback control, prefer deploying immutable Git SHA tags:
+Deployments use the `IMAGE_TAG` environment variable, so rollback means redeploying a previously published Git SHA tag:
 
 1. Set `IMAGE_TAG` on the deployment host to a known good SHA.
 2. Run `docker compose pull`.
@@ -116,7 +122,5 @@ The current workflow deploys the `main` image tag by default through Compose. Fo
 ## Recommended Improvements
 
 - Add a root script or parent build to run all service checks locally with one command.
-- Pin production deployments to SHA tags instead of mutable `main`.
 - Add dependency vulnerability scanning.
 - Add Docker image scanning.
-- Add smoke tests after dev and prod deployment.

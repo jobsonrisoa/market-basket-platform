@@ -82,7 +82,7 @@ The first implementation focus is the authentication foundation: users can regis
 | Platform | Validate every service Flyway migration set against PostgreSQL on PRs to `main`. | Implemented through GitHub Actions. |
 | Platform | Publish service images on `main`. | Implemented through GitHub Actions. |
 | Platform | Deploy dev after successful image publishing. | Implemented through GitHub Actions. |
-| Platform | Deploy prod manually. | Implemented through GitHub Actions. |
+| Platform | Deploy dev and prod with explicit image tags and smoke checks. | Implemented through GitHub Actions. |
 
 ## Non-Functional Requirements
 
@@ -280,7 +280,7 @@ The repository is currently strongest in the auth and platform foundation layers
 | Candidate | Why now | Main trade-off |
 | --- | --- | --- |
 | Kafka event-contract hardening | Builds on the first `auth.user.registered.v1` contract and reduces cross-service integration risk before consumers appear. | More test and schema discipline before there is much event volume. |
-| Deployment immutability and smoke tests | Reduces release risk by deploying SHA tags and verifying runtime health after rollout. | Improves operations without adding product-facing capability. |
+All four roadmap candidates in this section have an initial implementation. Next planning should choose between deepening seller workflows, adding consumer-side event contracts, or improving production observability.
 
 ### Marketplace Domain Workflows
 

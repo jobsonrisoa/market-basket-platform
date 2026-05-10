@@ -142,6 +142,7 @@ Centralized log aggregation is not configured yet. Prefer structured JSON logs b
 4. Confirm required environment variables are present on the host.
 5. Confirm the image tag exists in GitHub Container Registry.
 6. Restart the service with `docker compose up -d <service>`.
+7. Re-run deployment smoke checks for auth health, JWKS through Kong, and Prometheus readiness.
 
 ## Runbook: Database Connection Failure
 
@@ -206,7 +207,6 @@ Production should define backups for PostgreSQL data volumes before handling rea
 - Add migration smoke checks that verify Flyway histories after deployment.
 - Route Prometheus alerts through Alertmanager.
 - Add dashboard definitions for database, Kafka, and Redis health.
-- Pin production Compose deployments to immutable image tags.
 - Add HTTPS in front of Kong Gateway.
 - Add centralized structured logs.
 - Add secret management outside plain environment files.
