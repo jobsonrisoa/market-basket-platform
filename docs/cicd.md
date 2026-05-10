@@ -6,14 +6,14 @@ The repository uses GitHub Actions for pull request validation, image publicatio
 
 | Workflow | File | Trigger | Purpose |
 | --- | --- | --- | --- |
-| CI | `.github/workflows/ci.yml` | Pull request to `main`, push to `main`, manual dispatch | Format check, test, package, upload reports and jars for every service. |
+| CI | `.github/workflows/ci.yml` | Pull request to `main`, push to `main`, manual dispatch | Validate migrations, format check, test, package, upload reports and jars for every service. |
 | Docker Images | `.github/workflows/docker.yml` | Push to `main`, manual dispatch | Build and push every service image to GitHub Container Registry. |
 | Deploy Dev | `.github/workflows/deploy-dev.yml` | Successful Docker Images workflow on `main`, manual dispatch | Deploy the Compose stack to the `dev` environment over SSH. |
 | Deploy Prod | `.github/workflows/deploy-prod.yml` | Manual dispatch | Deploy the Compose stack to the `prod` environment over SSH. |
 
 ## CI Matrix
 
-CI runs one matrix entry per service:
+CI runs two matrix jobs per service: one for migration validation and one for build/package validation.
 
 - `auth-service`
 - `customer-service`
@@ -24,7 +24,14 @@ CI runs one matrix entry per service:
 - `inventory-service`
 - `notification-service`
 
-For each service, CI:
+For each service, the migration validation job:
+
+1. Starts a disposable PostgreSQL 16 service.
+2. Creates the service-owned database, for example `market_auth` or `market_catalog`.
+3. Runs Flyway migrations through the service Maven wrapper.
+4. Runs `flyway:validate` and `flyway:info` against the migrated database.
+
+For each service, the build job:
 
 1. Checks out the repository.
 2. Sets up Temurin Java 17 with Maven cache.
@@ -33,6 +40,8 @@ For each service, CI:
 5. Runs `./mvnw -B -ntp package`.
 6. Uploads Surefire reports.
 7. Uploads the built service jar.
+
+Application tests use Testcontainers for PostgreSQL, Redis, and Kafka. Since every service now uses Flyway and Hibernate validation, the package step also exercises startup-time migration behavior.
 
 ## Image Publishing
 
@@ -107,5 +116,5 @@ The current workflow deploys the `main` image tag by default through Compose. Fo
 - Pin production deployments to SHA tags instead of mutable `main`.
 - Add dependency vulnerability scanning.
 - Add Docker image scanning.
-- Add explicit migration validation checks, such as verifying Flyway info against each service database before deployment.
+- Add controlled pre-deployment migration execution before app rollout.
 - Add smoke tests after dev and prod deployment.

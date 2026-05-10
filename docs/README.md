@@ -37,6 +37,7 @@ market-basket-platform
 
 - Update [architecture.md](architecture.md) when adding a service, database, broker, cache, or cross-service integration.
 - Update [api.md](api.md) when adding, removing, or changing an HTTP endpoint.
-- Update [cicd.md](cicd.md) when a workflow, environment, image tag, secret, or release rule changes.
+- Update [cicd.md](cicd.md) when a workflow, environment, image tag, migration gate, secret, or release rule changes.
 - Update [operations.md](operations.md) when a new runtime variable, monitoring surface, or runbook action is introduced.
+- Add schema changes as service-local Flyway migrations under `src/main/resources/db/migration`; do not rely on Hibernate to create or update tables.
 - Keep diagrams as Mermaid text so they remain reviewable in pull requests.

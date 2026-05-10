@@ -134,7 +134,17 @@ Auth variables:
 - `market_inventory`
 - `market_notification`
 
-Flyway runs automatically when services start. Hibernate is configured for schema validation, so schema changes should be added as versioned SQL migrations under each service's `src/main/resources/db/migration` directory.
+Flyway runs automatically when services start. Hibernate is configured for schema validation, so schema changes must be added as versioned SQL migrations under each service's `src/main/resources/db/migration` directory.
+
+Validate one service's migrations against a running local PostgreSQL database:
+
+```bash
+cd services/auth-service
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/market_auth \
+SPRING_DATASOURCE_USERNAME=market \
+SPRING_DATASOURCE_PASSWORD=market \
+./mvnw -B -ntp flyway:migrate flyway:validate flyway:info
+```
 
 ## Troubleshooting
 

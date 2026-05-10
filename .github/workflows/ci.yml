@@ -11,6 +11,82 @@ permissions:
   contents: read
 
 jobs:
+  migration-validation:
+    name: Validate migrations (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: auth-service
+            path: services/auth-service
+            database: market_auth
+          - service: customer-service
+            path: services/customer-service
+            database: market_customer
+          - service: seller-service
+            path: services/seller-service
+            database: market_seller
+          - service: catalog-service
+            path: services/catalog-service
+            database: market_catalog
+          - service: subscription-service
+            path: services/subscription-service
+            database: market_subscription
+          - service: order-service
+            path: services/order-service
+            database: market_order
+          - service: inventory-service
+            path: services/inventory-service
+            database: market_inventory
+          - service: notification-service
+            path: services/notification-service
+            database: market_notification
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+          cache-dependency-path: ${{ matrix.path }}/pom.xml
+
+      - name: Make Maven wrapper executable
+        run: chmod +x mvnw
+        working-directory: ${{ matrix.path }}
+
+      - name: Create service database
+        run: >
+          docker exec "${{ job.services.postgres.id }}"
+          psql -U postgres -d postgres -v ON_ERROR_STOP=1
+          -c "CREATE DATABASE ${{ matrix.database }};"
+
+      - name: Validate migrations
+        run: ./mvnw -B -ntp flyway:migrate flyway:validate flyway:info
+        working-directory: ${{ matrix.path }}
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/${{ matrix.database }}
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: postgres
+
   service-build:
     name: Build ${{ matrix.service }}
     runs-on: ubuntu-latest

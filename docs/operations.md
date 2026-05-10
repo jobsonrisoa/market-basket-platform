@@ -154,8 +154,9 @@ Centralized log aggregation is not configured yet. Prefer structured JSON logs b
 
 1. Inspect service logs for the failed migration version and SQL error.
 2. Confirm the service is connecting to its own database, for example `market_auth` for auth-service.
-3. Do not edit an already-applied migration in a shared environment; add a new forward-only fix migration.
-4. For local-only broken migration history, recreate the local PostgreSQL volume after confirming no useful local data needs to be kept.
+3. Confirm CI migration validation passed for the same service and migration version.
+4. Do not edit an already-applied migration in a shared environment; add a new forward-only fix migration.
+5. For local-only broken migration history, recreate the local PostgreSQL volume after confirming no useful local data needs to be kept.
 
 ## Runbook: Kafka Connection Failure
 
@@ -200,6 +201,7 @@ Production should define backups for PostgreSQL data volumes before handling rea
 
 ## Production Readiness Checklist
 
+- Add controlled pre-deployment migration execution before app rollout.
 - Add migration smoke checks that verify Flyway histories after deployment.
 - Route Prometheus alerts through Alertmanager.
 - Add dashboard definitions for database, Kafka, and Redis health.

@@ -186,11 +186,17 @@ RBAC implementation plan:
 
 ### Kafka Event Contracts and Testing
 
-Decision to make next: choose the event governance approach after an AI specialist review of repo constraints and trade-offs.
+Decision: start event governance with JSON Schema plus contract tests.
 
-Current recommendation: start with consumer-driven contract tests plus Testcontainers Kafka, then add a schema registry when event volume and cross-team coordination justify the operational cost.
+Current recommendation: keep JSON Schema and consumer-driven contract tests as the first line of defense, then add a schema registry when event volume and cross-team coordination justify the operational cost.
 
-Specialist recommendation for this repository: choose JSON Schema plus contract tests first. The current services already publish JSON strings through `KafkaTemplate<String, String>`, Docker Compose runs Kafka without Schema Registry, and there are not yet active cross-service Kafka consumers. Avro or Protobuf with Schema Registry should remain later options when event contracts become shared by multiple production consumers.
+Specialist recommendation for this repository: choose JSON Schema plus contract tests first. The current services publish JSON strings through `KafkaTemplate<String, String>`, Docker Compose runs Kafka without Schema Registry, and there are not yet active cross-service Kafka consumers. Avro or Protobuf with Schema Registry should remain later options when event contracts become shared by multiple production consumers.
+
+Implementation status:
+
+- `auth.user.registered.v1` has a JSON Schema producer contract test in `auth-service`.
+- `KafkaOutboxPublisher` now builds the event envelope with Jackson instead of string formatting.
+- Schema Registry is intentionally deferred until multiple production consumers depend on shared topics or manual compatibility review becomes too expensive.
 
 Option comparison:
 
@@ -209,10 +215,9 @@ Specialist review brief:
 
 Repo-specific specialist concerns:
 
-- `KafkaOutboxPublisher` builds the final event envelope with string formatting. Move envelope serialization to Jackson or another structured JSON writer before event payloads become more complex.
-- `OutboxEvent` currently builds nested payload JSON with string formatting. Contract tests must validate both the envelope and the nested payload shape.
+- `OutboxEvent` currently builds nested payload JSON with string formatting. Move payload serialization to structured JSON before payloads become more complex.
 - `KafkaOutboxPublisher` currently sends each event to a topic named exactly like the event type, for example `auth.user.registered.v1`. Decide before production whether to keep one-topic-per-event-type or move to domain topics such as `auth.events` with `eventType` inside the envelope.
-- Existing outbox tests assert event names and loose payload containment, but they do not yet prove schema compatibility, broker publishing, or consumer behavior.
+- Existing contract tests prove one producer schema, but they do not yet prove broker publishing or consumer behavior.
 - Testcontainers Kafka dependencies already exist, but Kafka container tags should be pinned before Kafka integration tests become CI-critical.
 
 Concerns the specialist should explicitly evaluate:
@@ -228,18 +233,16 @@ Concerns the specialist should explicitly evaluate:
 | Consumer idempotency | Consumers must handle duplicate events and retries safely. |
 | Observability | Events should carry correlation IDs and enough metadata for tracing across services. |
 
-Baseline event-contract plan before the final decision:
+Remaining event-contract plan:
 
-1. Create a top-level `contracts/events` directory with one folder per domain.
-2. Store versioned JSON Schema files and examples for current events, starting with `auth.user.registered.v1`, `auth.session.login_succeeded.v1`, and `auth.session.login_failed.v1`.
-3. Add producer tests in `auth-service` that generate real `OutboxEvent` instances, serialize the final Kafka envelope, and validate it against the schema.
-4. Refactor envelope and payload serialization to structured JSON before adding more event fields.
-5. Decide the topic strategy: event-type topics now versus domain topics such as `auth.events`.
-6. Add consumer contract tests in each consuming service using recorded example events.
-7. Add Testcontainers Kafka integration tests for at least one publish/consume path per workflow.
-8. Pin Kafka Testcontainers image versions before these tests become CI gates.
-9. Require compatibility checks in CI: additive optional fields are allowed in the same version; removed fields, renamed fields, type changes, and semantic changes require a new event version.
-10. Revisit Schema Registry when two or more services actively consume the same topic in production or when event evolution becomes difficult to review manually.
+1. Add schemas and examples for the remaining auth events, starting with `auth.session.login_succeeded.v1` and `auth.session.login_failed.v1`.
+2. Refactor `OutboxEvent` payload creation to structured JSON before adding more event fields.
+3. Decide the topic strategy: event-type topics now versus domain topics such as `auth.events`.
+4. Add consumer contract tests in each consuming service using recorded example events.
+5. Add Testcontainers Kafka integration tests for at least one publish/consume path per workflow.
+6. Pin Kafka Testcontainers image versions before these tests become CI gates.
+7. Require compatibility checks in CI: additive optional fields are allowed in the same version; removed fields, renamed fields, type changes, and semantic changes require a new event version.
+8. Revisit Schema Registry when two or more services actively consume the same topic in production or when event evolution becomes difficult to review manually.
 
 ### Production Database Migrations
 
@@ -251,22 +254,21 @@ Rationale:
 - Versioned SQL migrations are easy to review in PRs and keep close to the service that owns the schema.
 - The project is still early; Liquibase's richer change model is not needed yet.
 
-Implementation plan:
-
-1. Add Flyway dependencies to each PostgreSQL-backed service.
-2. Store migrations under `src/main/resources/db/migration` in each service.
-3. Use service-specific migration histories because each service owns its own database, for example `market_auth`, `market_catalog`, and `market_order`.
-4. Convert JPA auto-DDL behavior to validation-only; migrations must create and update schema in dev, CI, and production.
-5. Run Flyway automatically on service startup in dev and CI.
-6. For production, run migrations as a controlled release step before app rollout or as startup migrations only when deployment orchestration guarantees one migrator at a time.
-7. Add rollback practice through forward-only fix migrations rather than destructive down migrations.
-8. Require migration review for locking risk, data backfills, nullable-to-not-null transitions, indexes on large tables, and backward compatibility during rolling deploys.
-
 Implementation status:
 
-- Flyway is enabled for all PostgreSQL-backed services.
+- Flyway dependencies and the Flyway Maven plugin are configured for every PostgreSQL-backed service.
+- Migrations are stored under each service's `src/main/resources/db/migration` directory.
+- Hibernate defaults to schema validation through `spring.jpa.hibernate.ddl-auto=validate`.
+- Flyway runs automatically when services start in local, CI, and deployed Compose environments.
+- CI includes a dedicated PostgreSQL-backed migration validation matrix that applies migrations, validates them, and prints Flyway info for every service database.
 - `auth-service` owns the first real schema migration for users, roles, OAuth accounts, refresh tokens, and outbox events.
 - Scaffold services include placeholder initial migrations so future domain migrations append cleanly without reintroducing Hibernate schema generation.
+
+Remaining production migration work:
+
+- For production, move from startup-only migrations to a controlled release step before app rollout or keep startup migrations only when deployment orchestration guarantees one migrator at a time.
+- Keep rollback practice forward-only: add fix migrations rather than destructive down migrations.
+- Require migration review for locking risk, data backfills, nullable-to-not-null transitions, indexes on large tables, and backward compatibility during rolling deploys.
 
 ### Marketplace Domain Workflows
 

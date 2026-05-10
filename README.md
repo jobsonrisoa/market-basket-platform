@@ -15,7 +15,7 @@ Market Basket Platform is a Spring Boot microservice system for a grocery or mar
 | `inventory-service` | 8085 | Inventory bounded context scaffold. |
 | `notification-service` | 8086 | Notification bounded context scaffold. |
 
-Each service is a Java 17 Spring Boot application with Maven wrapper support, Spotless formatting, Actuator, JPA, Redis, Kafka, validation, Web MVC, PostgreSQL, and Testcontainers-based test dependencies. The auth service also includes Spring Security, OAuth2 resource server/client support, JWT infrastructure, password hashing, refresh tokens, and an outbox publisher.
+Each service is a Java 17 Spring Boot application with Maven wrapper support, Spotless formatting, Actuator, JPA, Flyway, Redis, Kafka, validation, Web MVC, PostgreSQL, and Testcontainers-based test dependencies. The auth service also includes Spring Security, OAuth2 resource server/client support, JWT infrastructure, password hashing, refresh tokens, and an outbox publisher.
 
 ## Local Quick Start
 
@@ -36,6 +36,8 @@ Run one service's checks:
 cd services/auth-service
 ./mvnw -B -ntp spotless:check package
 ```
+
+Schema changes are managed with versioned Flyway migrations under each service's `src/main/resources/db/migration` directory. Flyway runs when services start, and CI validates every service migration set against PostgreSQL.
 
 Useful local endpoints:
 

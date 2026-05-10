@@ -92,13 +92,15 @@ The auth service has an outbox persistence model and Kafka publisher. This allow
 - `auth.session.refresh_token_reused.v1`
 
 Event contracts should remain versioned. Consumers should be tolerant of additive fields.
+The first implemented event-governance mechanism is a JSON Schema producer contract test for `auth.user.registered.v1` in auth-service.
 
 ## Data Ownership
 
 Each service owns its database and should be the only writer to its own schema. Cross-service data sharing should happen through APIs or events, not direct database joins.
 
 Local Compose creates all service databases from `infra/postgres/init.sql`.
-Flyway migrations stored in each service's `src/main/resources/db/migration` directory own schema creation and evolution. Hibernate validates mapped schemas instead of creating or updating production tables.
+Service-local Flyway migrations stored in each service's `src/main/resources/db/migration` directory now own schema creation and evolution. Hibernate validates mapped schemas instead of creating or updating production tables.
+Services currently run Flyway on startup, and CI validates every service migration set against a disposable PostgreSQL database.
 
 ## Deployment Architecture
 
@@ -118,7 +120,7 @@ Images are tagged with both the Git SHA and `main` on pushes to `main`. Deployme
 ## Known Architecture Gaps
 
 - No centralized service discovery is defined.
-- No dedicated pre-deployment migration job is configured yet; services currently run Flyway on startup.
+- No dedicated pre-deployment migration execution job is configured yet; services currently run Flyway on startup after CI migration validation.
 - No distributed tracing is configured yet.
 - No production Prometheus scrape configuration is committed yet.
 - No explicit inter-service authorization model is configured outside auth JWT issuance.
