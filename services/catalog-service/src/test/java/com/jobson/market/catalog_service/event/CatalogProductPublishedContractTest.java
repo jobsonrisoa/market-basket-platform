@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.jobson.market.catalog_service.domain.ProductDetails;
 import com.jobson.market.catalog_service.domain.ProductEntity;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -25,13 +26,14 @@ class CatalogProductPublishedContractTest {
     ProductEntity product =
         ProductEntity.create(
             SELLER_ID,
-            CATEGORY_ID,
-            "Organic Carrots",
-            "Fresh carrots",
-            "kg",
-            "1 kg bag",
-            new BigDecimal("7.50"),
-            "USD",
+            new ProductDetails(
+                CATEGORY_ID,
+                "Organic Carrots",
+                "Fresh carrots",
+                "kg",
+                "1 kg bag",
+                new BigDecimal("7.50"),
+                "USD"),
             Instant.parse("2026-05-10T12:00:00Z"));
     product.publish(Instant.parse("2026-05-10T13:00:00Z"));
 

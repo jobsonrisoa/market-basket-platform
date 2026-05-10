@@ -15,6 +15,8 @@ import java.util.UUID;
 @Table(name = "catalog_products")
 public class ProductEntity {
 
+  private static final String UPDATED_AT_REQUIRED = "updatedAt is required";
+
   @Id
   @Column(nullable = false, updatable = false)
   private UUID id;
@@ -54,85 +56,30 @@ public class ProductEntity {
 
   protected ProductEntity() {}
 
-  private ProductEntity(
-      UUID id,
-      UUID sellerId,
-      UUID categoryId,
-      String name,
-      String description,
-      String unit,
-      String packageSize,
-      BigDecimal priceAmount,
-      String currency,
-      ProductStatus status,
-      Instant createdAt,
-      Instant updatedAt) {
-    this.id = Objects.requireNonNull(id, "id is required");
-    this.sellerId = Objects.requireNonNull(sellerId, "sellerId is required");
-    this.categoryId = Objects.requireNonNull(categoryId, "categoryId is required");
-    this.name = requireText(name, "name");
-    this.description = normalizeOptional(description);
-    this.unit = requireText(unit, "unit");
-    this.packageSize = requireText(packageSize, "packageSize");
-    this.priceAmount = requirePrice(priceAmount);
-    this.currency = requireCurrency(currency);
-    this.status = Objects.requireNonNull(status, "status is required");
-    this.createdAt = Objects.requireNonNull(createdAt, "createdAt is required");
-    this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt is required");
+  public static ProductEntity create(UUID sellerId, ProductDetails details, Instant now) {
+    ProductEntity product = new ProductEntity();
+    product.id = UUID.randomUUID();
+    product.sellerId = Objects.requireNonNull(sellerId, "sellerId is required");
+    product.status = ProductStatus.DRAFT;
+    product.createdAt = Objects.requireNonNull(now, "createdAt is required");
+    product.applyDetails(details);
+    product.updatedAt = now;
+    return product;
   }
 
-  public static ProductEntity create(
-      UUID sellerId,
-      UUID categoryId,
-      String name,
-      String description,
-      String unit,
-      String packageSize,
-      BigDecimal priceAmount,
-      String currency,
-      Instant now) {
-    return new ProductEntity(
-        UUID.randomUUID(),
-        sellerId,
-        categoryId,
-        name,
-        description,
-        unit,
-        packageSize,
-        priceAmount,
-        currency,
-        ProductStatus.DRAFT,
-        now,
-        now);
-  }
-
-  public void update(
-      UUID categoryId,
-      String name,
-      String description,
-      String unit,
-      String packageSize,
-      BigDecimal priceAmount,
-      String currency,
-      Instant now) {
-    this.categoryId = Objects.requireNonNull(categoryId, "categoryId is required");
-    this.name = requireText(name, "name");
-    this.description = normalizeOptional(description);
-    this.unit = requireText(unit, "unit");
-    this.packageSize = requireText(packageSize, "packageSize");
-    this.priceAmount = requirePrice(priceAmount);
-    this.currency = requireCurrency(currency);
-    this.updatedAt = Objects.requireNonNull(now, "updatedAt is required");
+  public void update(ProductDetails details, Instant now) {
+    applyDetails(details);
+    this.updatedAt = Objects.requireNonNull(now, UPDATED_AT_REQUIRED);
   }
 
   public void publish(Instant now) {
     this.status = ProductStatus.PUBLISHED;
-    this.updatedAt = Objects.requireNonNull(now, "updatedAt is required");
+    this.updatedAt = Objects.requireNonNull(now, UPDATED_AT_REQUIRED);
   }
 
   public void unpublish(Instant now) {
     this.status = ProductStatus.UNPUBLISHED;
-    this.updatedAt = Objects.requireNonNull(now, "updatedAt is required");
+    this.updatedAt = Objects.requireNonNull(now, UPDATED_AT_REQUIRED);
   }
 
   public UUID id() {
@@ -211,5 +158,16 @@ public class ProductEntity {
       throw new IllegalArgumentException("currency must be a three-letter ISO code");
     }
     return currency;
+  }
+
+  private void applyDetails(ProductDetails details) {
+    Objects.requireNonNull(details, "details is required");
+    this.categoryId = Objects.requireNonNull(details.categoryId(), "categoryId is required");
+    this.name = requireText(details.name(), "name");
+    this.description = normalizeOptional(details.description());
+    this.unit = requireText(details.unit(), "unit");
+    this.packageSize = requireText(details.packageSize(), "packageSize");
+    this.priceAmount = requirePrice(details.priceAmount());
+    this.currency = requireCurrency(details.currency());
   }
 }

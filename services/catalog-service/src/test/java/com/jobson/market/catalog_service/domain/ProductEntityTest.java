@@ -19,13 +19,14 @@ class ProductEntityTest {
     ProductEntity product =
         ProductEntity.create(
             SELLER_ID,
-            CATEGORY_ID,
-            " Organic Carrots ",
-            "Fresh carrots",
-            "kg",
-            "1 kg bag",
-            new BigDecimal("7.50"),
-            "usd",
+            new ProductDetails(
+                CATEGORY_ID,
+                " Organic Carrots ",
+                "Fresh carrots",
+                "kg",
+                "1 kg bag",
+                new BigDecimal("7.50"),
+                "usd"),
             NOW);
 
     assertEquals("Organic Carrots", product.name());
@@ -39,19 +40,12 @@ class ProductEntityTest {
 
   @Test
   void shouldRejectNegativePrice() {
+    ProductDetails invalidDetails =
+        new ProductDetails(
+            CATEGORY_ID, "Organic Carrots", null, "kg", "1 kg bag", new BigDecimal("-1.00"), "USD");
+
     assertThrows(
-        IllegalArgumentException.class,
-        () ->
-            ProductEntity.create(
-                SELLER_ID,
-                CATEGORY_ID,
-                "Organic Carrots",
-                null,
-                "kg",
-                "1 kg bag",
-                new BigDecimal("-1.00"),
-                "USD",
-                NOW));
+        IllegalArgumentException.class, () -> ProductEntity.create(SELLER_ID, invalidDetails, NOW));
   }
 
   @Test
@@ -73,13 +67,14 @@ class ProductEntityTest {
     Instant updatedAt = Instant.parse("2026-05-10T13:00:00Z");
 
     product.update(
-        CATEGORY_ID,
-        "Rainbow Carrots",
-        "Colorful carrots",
-        "bundle",
-        "6 count",
-        new BigDecimal("9.25"),
-        "BRL",
+        new ProductDetails(
+            CATEGORY_ID,
+            "Rainbow Carrots",
+            "Colorful carrots",
+            "bundle",
+            "6 count",
+            new BigDecimal("9.25"),
+            "BRL"),
         updatedAt);
 
     assertEquals("Rainbow Carrots", product.name());
@@ -94,13 +89,14 @@ class ProductEntityTest {
   private ProductEntity product() {
     return ProductEntity.create(
         SELLER_ID,
-        CATEGORY_ID,
-        "Organic Carrots",
-        "Fresh carrots",
-        "kg",
-        "1 kg bag",
-        new BigDecimal("7.50"),
-        "USD",
+        new ProductDetails(
+            CATEGORY_ID,
+            "Organic Carrots",
+            "Fresh carrots",
+            "kg",
+            "1 kg bag",
+            new BigDecimal("7.50"),
+            "USD"),
         NOW);
   }
 }

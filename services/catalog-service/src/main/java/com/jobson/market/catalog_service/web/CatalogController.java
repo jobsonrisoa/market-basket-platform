@@ -2,6 +2,7 @@ package com.jobson.market.catalog_service.web;
 
 import com.jobson.market.catalog_service.application.CatalogService;
 import com.jobson.market.catalog_service.domain.CategoryEntity;
+import com.jobson.market.catalog_service.domain.ProductDetails;
 import com.jobson.market.catalog_service.domain.ProductEntity;
 import com.jobson.market.catalog_service.domain.ProductStatus;
 import jakarta.validation.Valid;
@@ -58,16 +59,7 @@ class CatalogController {
 
   @PostMapping("/products")
   ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody CreateProductRequest request) {
-    ProductEntity product =
-        catalog.createProduct(
-            request.sellerId(),
-            request.categoryId(),
-            request.name(),
-            request.description(),
-            request.unit(),
-            request.packageSize(),
-            request.priceAmount(),
-            request.currency());
+    ProductEntity product = catalog.createProduct(request.sellerId(), request.details());
     return ResponseEntity.status(HttpStatus.CREATED).body(ProductResponse.from(product));
   }
 
@@ -85,16 +77,7 @@ class CatalogController {
   @PatchMapping("/products/{productId}")
   ProductResponse updateProduct(
       @PathVariable UUID productId, @Valid @RequestBody UpdateProductRequest request) {
-    return ProductResponse.from(
-        catalog.updateProduct(
-            productId,
-            request.categoryId(),
-            request.name(),
-            request.description(),
-            request.unit(),
-            request.packageSize(),
-            request.priceAmount(),
-            request.currency()));
+    return ProductResponse.from(catalog.updateProduct(productId, request.details()));
   }
 
   @PostMapping("/products/{productId}/publish")
@@ -119,7 +102,12 @@ class CatalogController {
       @NotBlank String unit,
       @NotBlank String packageSize,
       @NotNull @DecimalMin("0.00") BigDecimal priceAmount,
-      @NotBlank String currency) {}
+      @NotBlank String currency) {
+    ProductDetails details() {
+      return new ProductDetails(
+          categoryId, name, description, unit, packageSize, priceAmount, currency);
+    }
+  }
 
   record UpdateProductRequest(
       @NotNull UUID categoryId,
@@ -128,7 +116,12 @@ class CatalogController {
       @NotBlank String unit,
       @NotBlank String packageSize,
       @NotNull @DecimalMin("0.00") BigDecimal priceAmount,
-      @NotBlank String currency) {}
+      @NotBlank String currency) {
+    ProductDetails details() {
+      return new ProductDetails(
+          categoryId, name, description, unit, packageSize, priceAmount, currency);
+    }
+  }
 
   record CategoryResponse(UUID id, String name, Instant createdAt, Instant updatedAt) {
     static CategoryResponse from(CategoryEntity category) {

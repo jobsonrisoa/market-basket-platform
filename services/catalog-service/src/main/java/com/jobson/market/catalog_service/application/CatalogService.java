@@ -1,11 +1,11 @@
 package com.jobson.market.catalog_service.application;
 
 import com.jobson.market.catalog_service.domain.CategoryEntity;
+import com.jobson.market.catalog_service.domain.ProductDetails;
 import com.jobson.market.catalog_service.domain.ProductEntity;
 import com.jobson.market.catalog_service.domain.ProductStatus;
 import com.jobson.market.catalog_service.persistence.CategoryRepository;
 import com.jobson.market.catalog_service.persistence.ProductRepository;
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
@@ -37,45 +37,25 @@ public class CatalogService {
 
   @Transactional(readOnly = true)
   public CategoryEntity getCategory(UUID categoryId) {
-    return categories
-        .findById(categoryId)
-        .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+    return requireCategory(categoryId);
   }
 
   @Transactional
   public CategoryEntity renameCategory(UUID categoryId, String name) {
-    CategoryEntity category = getCategory(categoryId);
+    CategoryEntity category = requireCategory(categoryId);
     category.rename(name, clock.instant());
     return categories.save(category);
   }
 
   @Transactional
-  public ProductEntity createProduct(
-      UUID sellerId,
-      UUID categoryId,
-      String name,
-      String description,
-      String unit,
-      String packageSize,
-      BigDecimal priceAmount,
-      String currency) {
-    getCategory(categoryId);
-    return products.save(
-        ProductEntity.create(
-            sellerId,
-            categoryId,
-            name,
-            description,
-            unit,
-            packageSize,
-            priceAmount,
-            currency,
-            clock.instant()));
+  public ProductEntity createProduct(UUID sellerId, ProductDetails details) {
+    requireCategory(details.categoryId());
+    return products.save(ProductEntity.create(sellerId, details, clock.instant()));
   }
 
   @Transactional(readOnly = true)
   public ProductEntity getProduct(UUID productId) {
-    return products.findById(productId).orElseThrow(() -> new ProductNotFoundException(productId));
+    return requireProduct(productId);
   }
 
   @Transactional(readOnly = true)
@@ -87,34 +67,35 @@ public class CatalogService {
   }
 
   @Transactional
-  public ProductEntity updateProduct(
-      UUID productId,
-      UUID categoryId,
-      String name,
-      String description,
-      String unit,
-      String packageSize,
-      BigDecimal priceAmount,
-      String currency) {
-    getCategory(categoryId);
-    ProductEntity product = getProduct(productId);
-    product.update(
-        categoryId, name, description, unit, packageSize, priceAmount, currency, clock.instant());
+  public ProductEntity updateProduct(UUID productId, ProductDetails details) {
+    requireCategory(details.categoryId());
+    ProductEntity product = requireProduct(productId);
+    product.update(details, clock.instant());
     return products.save(product);
   }
 
   @Transactional
   public ProductEntity publishProduct(UUID productId) {
-    ProductEntity product = getProduct(productId);
-    getCategory(product.categoryId());
+    ProductEntity product = requireProduct(productId);
+    requireCategory(product.categoryId());
     product.publish(clock.instant());
     return products.save(product);
   }
 
   @Transactional
   public ProductEntity unpublishProduct(UUID productId) {
-    ProductEntity product = getProduct(productId);
+    ProductEntity product = requireProduct(productId);
     product.unpublish(clock.instant());
     return products.save(product);
+  }
+
+  private CategoryEntity requireCategory(UUID categoryId) {
+    return categories
+        .findById(categoryId)
+        .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+  }
+
+  private ProductEntity requireProduct(UUID productId) {
+    return products.findById(productId).orElseThrow(() -> new ProductNotFoundException(productId));
   }
 }
