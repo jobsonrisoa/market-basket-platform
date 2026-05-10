@@ -26,6 +26,7 @@ jobs:
             git fetch origin main
             git checkout main
             git pull --ff-only origin main
+            ./scripts/run-migrations.sh
             docker compose pull
             docker compose up -d --remove-orphans
             docker compose ps

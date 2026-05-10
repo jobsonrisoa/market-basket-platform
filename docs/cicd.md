@@ -75,10 +75,13 @@ cd "$DEPLOY_PATH"
 git fetch origin main
 git checkout main
 git pull --ff-only origin main
+./scripts/run-migrations.sh
 docker compose pull
 docker compose up -d --remove-orphans
 docker compose ps
 ```
+
+`scripts/run-migrations.sh` starts PostgreSQL, waits for health, creates any missing service databases, and runs each service's pinned Flyway runner with `migrate`, `validate`, and `info`. It never runs `clean`. The deployment runners allow `baselineOnMigrate` so environments that already had pre-Flyway schemas can adopt Flyway history; CI validation remains strict against fresh databases. Application startup migrations remain enabled as a safety net after the controlled pre-rollout migration step.
 
 Dev deploys automatically after the Docker Images workflow succeeds on `main`. Prod deploys manually and should be protected by the GitHub `prod` environment.
 
@@ -116,5 +119,4 @@ The current workflow deploys the `main` image tag by default through Compose. Fo
 - Pin production deployments to SHA tags instead of mutable `main`.
 - Add dependency vulnerability scanning.
 - Add Docker image scanning.
-- Add controlled pre-deployment migration execution before app rollout.
 - Add smoke tests after dev and prod deployment.

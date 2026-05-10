@@ -4,6 +4,17 @@ x-observability-env: &observability-env
   SENTRY_RELEASE: ${SENTRY_RELEASE:-market-basket-platform@local}
   SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.0}
 
+x-flyway-runner: &flyway-runner
+  image: flyway/flyway:11.14.1-alpine
+  depends_on:
+    postgres:
+      condition: service_healthy
+  environment:
+    FLYWAY_USER: ${POSTGRES_USER:-market}
+    FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
+    FLYWAY_LOCATIONS: filesystem:/flyway/sql
+    FLYWAY_BASELINE_ON_MIGRATE: "true"
+
 services:
   postgres:
     image: postgres:16
@@ -276,6 +287,102 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
     ports:
       - "8086:8086"
+
+  migrate-auth-service:
+    <<: *flyway-runner
+    environment:
+      FLYWAY_USER: ${POSTGRES_USER:-market}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/market_auth
+    volumes:
+      - ./services/auth-service/src/main/resources/db/migration:/flyway/sql:ro
+    command: info
+
+  migrate-customer-service:
+    <<: *flyway-runner
+    environment:
+      FLYWAY_USER: ${POSTGRES_USER:-market}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/market_customer
+    volumes:
+      - ./services/customer-service/src/main/resources/db/migration:/flyway/sql:ro
+    command: info
+
+  migrate-seller-service:
+    <<: *flyway-runner
+    environment:
+      FLYWAY_USER: ${POSTGRES_USER:-market}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/market_seller
+    volumes:
+      - ./services/seller-service/src/main/resources/db/migration:/flyway/sql:ro
+    command: info
+
+  migrate-catalog-service:
+    <<: *flyway-runner
+    environment:
+      FLYWAY_USER: ${POSTGRES_USER:-market}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/market_catalog
+    volumes:
+      - ./services/catalog-service/src/main/resources/db/migration:/flyway/sql:ro
+    command: info
+
+  migrate-subscription-service:
+    <<: *flyway-runner
+    environment:
+      FLYWAY_USER: ${POSTGRES_USER:-market}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/market_subscription
+    volumes:
+      - ./services/subscription-service/src/main/resources/db/migration:/flyway/sql:ro
+    command: info
+
+  migrate-order-service:
+    <<: *flyway-runner
+    environment:
+      FLYWAY_USER: ${POSTGRES_USER:-market}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/market_order
+    volumes:
+      - ./services/order-service/src/main/resources/db/migration:/flyway/sql:ro
+    command: info
+
+  migrate-inventory-service:
+    <<: *flyway-runner
+    environment:
+      FLYWAY_USER: ${POSTGRES_USER:-market}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/market_inventory
+    volumes:
+      - ./services/inventory-service/src/main/resources/db/migration:/flyway/sql:ro
+    command: info
+
+  migrate-notification-service:
+    <<: *flyway-runner
+    environment:
+      FLYWAY_USER: ${POSTGRES_USER:-market}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/market_notification
+    volumes:
+      - ./services/notification-service/src/main/resources/db/migration:/flyway/sql:ro
+    command: info
 
   kong:
     image: kong:3.8

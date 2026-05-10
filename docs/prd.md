@@ -262,12 +262,13 @@ Implementation status:
 - Hibernate defaults to schema validation through `spring.jpa.hibernate.ddl-auto=validate`.
 - Flyway runs automatically when services start in local, CI, and deployed Compose environments.
 - CI includes a dedicated PostgreSQL-backed migration validation matrix that applies migrations, validates them, and prints Flyway info for every service database.
+- Dev and prod deployment workflows run controlled Flyway migration runners before application rollout.
 - `auth-service` owns the first real schema migration for users, roles, OAuth accounts, refresh tokens, and outbox events.
 - Scaffold services include placeholder initial migrations so future domain migrations append cleanly without reintroducing Hibernate schema generation.
 
 Remaining production migration work:
 
-- For production, move from startup-only migrations to a controlled release step before app rollout or keep startup migrations only when deployment orchestration guarantees one migrator at a time.
+- Keep startup Flyway enabled as a safety net while the controlled deployment migration step matures.
 - Keep rollback practice forward-only: add fix migrations rather than destructive down migrations.
 - Require migration review for locking risk, data backfills, nullable-to-not-null transitions, indexes on large tables, and backward compatibility during rolling deploys.
 
@@ -278,7 +279,6 @@ The repository is currently strongest in the auth and platform foundation layers
 | Candidate | Why now | Main trade-off |
 | --- | --- | --- |
 | Kafka event-contract hardening | Builds on the first `auth.user.registered.v1` contract and reduces cross-service integration risk before consumers appear. | More test and schema discipline before there is much event volume. |
-| Controlled pre-deployment migration execution | Completes the production migration story after CI validation. | Requires deployment orchestration changes and careful idempotent release behavior. |
 | Seller membership domain foundation | Unlocks marketplace authorization beyond global roles. | Starts domain modeling work before customer/catalog/order flows exist. |
 | Deployment immutability and smoke tests | Reduces release risk by deploying SHA tags and verifying runtime health after rollout. | Improves operations without adding product-facing capability. |
 

@@ -148,6 +148,12 @@ SPRING_DATASOURCE_PASSWORD=market \
 
 Use a fresh local database for validation when possible. Running Flyway against an older database that was created before Flyway was introduced may fail because the schema has tables but no Flyway history table.
 
+Run the same controlled migration step used by deployment:
+
+```bash
+./scripts/run-migrations.sh
+```
+
 ## Troubleshooting
 
 Check containers:
