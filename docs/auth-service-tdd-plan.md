@@ -1,5 +1,7 @@
 # Auth Service TDD Plan
 
+Status note: this is a historical implementation guide for the auth bounded context. The current source already implements the core auth slices, marketplace-aware RBAC, outbox persistence, Kafka publishing, Flyway migrations, and contract tests; use [prd.md](prd.md), [architecture.md](architecture.md), and [api.md](api.md) for current repo status.
+
 Este documento guia a implementacao incremental do `auth-service` usando o ciclo Red, Green, Refactor. Cada fatia deve ser implementada em commits pequenos, com testes escritos antes do codigo de producao.
 
 ## Principios

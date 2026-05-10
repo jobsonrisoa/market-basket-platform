@@ -92,7 +92,7 @@ The auth service has an outbox persistence model and Kafka publisher. This allow
 - `auth.session.refresh_token_reused.v1`
 
 Event contracts should remain versioned. Consumers should be tolerant of additive fields.
-The first implemented event-governance mechanism is a JSON Schema producer contract test for `auth.user.registered.v1` in auth-service.
+The first implemented event-governance mechanism is a JSON Schema producer contract test for `auth.user.registered.v1` in auth-service. The outbox publisher serializes the event envelope with Jackson and still uses JSON strings over Kafka; Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
 
 ## Data Ownership
 
@@ -100,7 +100,7 @@ Each service owns its database and should be the only writer to its own schema. 
 
 Local Compose creates all service databases from `infra/postgres/init.sql`.
 Service-local Flyway migrations stored in each service's `src/main/resources/db/migration` directory now own schema creation and evolution. Hibernate validates mapped schemas instead of creating or updating production tables.
-Services currently run Flyway on startup, and CI validates every service migration set against a disposable PostgreSQL database.
+Services currently run Flyway on startup, and CI validates every service migration set against a disposable PostgreSQL database through the Flyway Maven plugin.
 
 ## Deployment Architecture
 

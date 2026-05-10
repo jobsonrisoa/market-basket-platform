@@ -62,4 +62,4 @@ Useful local endpoints:
 
 ## CI/CD Summary
 
-Pull requests and pushes to `main` run the CI matrix across all services. Pushes to `main` also build and publish Docker images to GitHub Container Registry. A successful image publication triggers the dev deployment workflow, while production deployment is manual through the `Deploy Prod` workflow and the protected `prod` environment.
+Pull requests and pushes to `main` run migration validation, formatting, tests, and packaging across all services. Pushes to `main` also build and publish Docker images to GitHub Container Registry. A successful image publication triggers the dev deployment workflow, while production deployment is manual through the `Deploy Prod` workflow and the protected `prod` environment.

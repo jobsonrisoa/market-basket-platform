@@ -61,7 +61,7 @@ The first implementation focus is the authentication foundation: users can regis
 - Inventory reservation and stock adjustment.
 - Notification delivery through email, SMS, or push providers.
 - API gateway, service-to-service authorization, and centralized request tracing.
-- Database migrations with Flyway.
+- Controlled pre-deployment database migration execution.
 - Production-grade dashboards and alerts.
 
 ## Functional Requirements
@@ -75,7 +75,10 @@ The first implementation focus is the authentication foundation: users can regis
 | Auth | Store refresh tokens as hashes and rotate on refresh. | Implemented in `auth-service`. |
 | Auth | Revoke refresh-token family on detected reuse. | Implemented in `auth-service`. |
 | Auth | Publish auth domain events through an outbox. | Implemented in `auth-service`. |
+| Auth | Expose marketplace roles and permissions in auth responses and JWT claims. | Implemented in `auth-service`. |
+| Auth | Allow authorized admins to assign and revoke roles, suspend users, and reactivate users. | Implemented in `auth-service`. |
 | Platform | Build and test every service on PRs to `main`. | Implemented through GitHub Actions. |
+| Platform | Validate every service Flyway migration set against PostgreSQL on PRs to `main`. | Implemented through GitHub Actions. |
 | Platform | Publish service images on `main`. | Implemented through GitHub Actions. |
 | Platform | Deploy dev after successful image publishing. | Implemented through GitHub Actions. |
 | Platform | Deploy prod manually. | Implemented through GitHub Actions. |
@@ -175,12 +178,12 @@ Recommended account profiles:
 | `SELLER` | Seller/store account linked to one or more users. |
 | `PLATFORM` | Internal platform staff account. |
 
-RBAC implementation plan:
+RBAC implementation status and remaining plan:
 
-1. Add `SELLER_OWNER`, `SELLER_STAFF`, `SUPPORT_AGENT`, and `SUPER_ADMIN` to the auth domain role model.
-2. Replace broad `hasRole('ADMIN')` checks with permission-level checks for sensitive actions.
-3. Add permissions such as `SELLER_CATALOG_MANAGE`, `SELLER_INVENTORY_MANAGE`, `SELLER_ORDER_FULFILL`, `CUSTOMER_SUBSCRIPTION_MANAGE_OWN`, `PLATFORM_SELLER_REVIEW`, `AUTH_USER_ROLE_ASSIGN`, and `AUTH_USER_ROLE_REVOKE`.
-4. Emit role-change events with actor, target user, changed role, and affected account profile.
+1. Added `SELLER_OWNER`, `SELLER_STAFF`, `SUPPORT_AGENT`, and `SUPER_ADMIN` to the auth domain role model.
+2. Added permission-level checks for admin role assignment, role revocation, user suspension, and user reactivation.
+3. Added permissions such as `SELLER_CATALOG_MANAGE`, `SELLER_INVENTORY_MANAGE`, `SELLER_ORDER_FULFILL`, `CUSTOMER_SUBSCRIPTION_MANAGE_OWN`, `PLATFORM_SELLER_REVIEW`, `AUTH_USER_ROLE_ASSIGN`, and `AUTH_USER_ROLE_REVOKE`.
+4. Added role-change outbox events with actor, target user, and changed role.
 5. Add seller membership records outside auth so authorization can combine JWT permissions with resource ownership checks, for example "user has `SELLER_STAFF` and belongs to seller store X."
 6. Keep first-admin bootstrap operational and auditable; only `SUPER_ADMIN` should grant `ADMIN` or `SUPER_ADMIN` after bootstrap.
 
@@ -269,6 +272,17 @@ Remaining production migration work:
 - For production, move from startup-only migrations to a controlled release step before app rollout or keep startup migrations only when deployment orchestration guarantees one migrator at a time.
 - Keep rollback practice forward-only: add fix migrations rather than destructive down migrations.
 - Require migration review for locking risk, data backfills, nullable-to-not-null transitions, indexes on large tables, and backward compatibility during rolling deploys.
+
+### Next Implementation Candidates
+
+The repository is currently strongest in the auth and platform foundation layers. The next decision should choose one of these slices:
+
+| Candidate | Why now | Main trade-off |
+| --- | --- | --- |
+| Kafka event-contract hardening | Builds on the first `auth.user.registered.v1` contract and reduces cross-service integration risk before consumers appear. | More test and schema discipline before there is much event volume. |
+| Controlled pre-deployment migration execution | Completes the production migration story after CI validation. | Requires deployment orchestration changes and careful idempotent release behavior. |
+| Seller membership domain foundation | Unlocks marketplace authorization beyond global roles. | Starts domain modeling work before customer/catalog/order flows exist. |
+| Deployment immutability and smoke tests | Reduces release risk by deploying SHA tags and verifying runtime health after rollout. | Improves operations without adding product-facing capability. |
 
 ### Marketplace Domain Workflows
 

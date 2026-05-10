@@ -25,6 +25,7 @@ Request:
 Response: `201 Created`
 
 Returns the registration result produced by `RegisterUserUseCase`.
+The result includes the user id, normalized email, roles, permissions, account profile, customer profile type, and email verification state.
 
 ### Login
 
@@ -45,6 +46,7 @@ Request:
 Response: `200 OK`
 
 Returns an access token and refresh token result produced by `LoginWithPasswordUseCase`. The response also sets an HTTP-only `refresh_token` cookie scoped to `/auth`.
+The result includes roles, permissions, account profile, customer profile type, and token metadata used by clients for role-aware navigation.
 
 ### Refresh
 
@@ -108,9 +110,74 @@ Response: `200 OK`
 {
   "userId": "user-uuid",
   "email": "user@example.com",
-  "emailVerified": false
+  "emailVerified": false,
+  "roles": ["CUSTOMER"],
+  "permissions": ["CUSTOMER_PROFILE_ACCESS", "CUSTOMER_SUBSCRIPTION_MANAGE_OWN"],
+  "accountProfile": "CUSTOMER",
+  "customerProfileType": "CUSTOMER"
 }
 ```
+
+### Assign User Role
+
+```http
+POST /auth/admin/users/{userId}/roles
+Authorization: Bearer <access-token>
+Content-Type: application/json
+```
+
+Requires `AUTH_USER_ROLE_ASSIGN`.
+
+Request:
+
+```json
+{
+  "role": "SELLER_OWNER"
+}
+```
+
+Response: `204 No Content`
+
+Assigns the requested role to the target user. Assigning security-sensitive roles such as `ADMIN` or `SUPER_ADMIN` requires a `SUPER_ADMIN` actor.
+
+### Remove User Role
+
+```http
+DELETE /auth/admin/users/{userId}/roles/{role}
+Authorization: Bearer <access-token>
+```
+
+Requires `AUTH_USER_ROLE_REVOKE`.
+
+Response: `204 No Content`
+
+Removes the requested role from the target user. Removing security-sensitive roles such as `ADMIN` or `SUPER_ADMIN` requires a `SUPER_ADMIN` actor.
+
+### Suspend User
+
+```http
+POST /auth/admin/users/{userId}/suspend
+Authorization: Bearer <access-token>
+```
+
+Requires `PLATFORM_SELLER_REVIEW`.
+
+Response: `204 No Content`
+
+Suspends the target user account.
+
+### Reactivate User
+
+```http
+POST /auth/admin/users/{userId}/reactivate
+Authorization: Bearer <access-token>
+```
+
+Requires `PLATFORM_SELLER_REVIEW`.
+
+Response: `204 No Content`
+
+Reactivates the target user account.
 
 ### JWKS
 
@@ -139,6 +206,7 @@ The auth service includes `AuthExceptionHandler` for translating application exc
 ## Authentication Notes
 
 - Access tokens are bearer JWTs.
+- JWTs include role, permission, account profile, customer profile type, and email verification claims.
 - Refresh tokens are opaque values and should be handled as secrets.
 - Login and refresh responses include refresh tokens in both response body data and an HTTP-only cookie.
 - The cookie is marked `Secure`, so browser-based local testing over plain HTTP may need direct request-body refresh handling unless local HTTPS is introduced.

@@ -159,7 +159,7 @@ sequenceDiagram
 flowchart LR
   pr[Pull Request to main]
   push[Push to main]
-  ci[CI matrix: Spotless, package, reports, jars]
+  ci[CI matrix: Flyway validation, Spotless, package, reports, jars]
   docker[Docker Images matrix: build and push]
   ghcr[GHCR images tagged SHA and main]
   dev[Deploy Dev over SSH]

@@ -9,7 +9,7 @@ This directory is the source of truth for product, architecture, delivery, and o
 - [Diagrams](diagrams.md): system context, containers, auth flow, CI/CD, and deployment diagrams.
 - [API reference](api.md): current HTTP endpoints and examples.
 - [Local development](local-development.md): how to run, test, format, and troubleshoot locally.
-- [CI/CD flow](cicd.md): GitHub Actions jobs, environments, secrets, images, and rollback notes.
+- [CI/CD flow](cicd.md): GitHub Actions migration validation, build jobs, environments, secrets, images, and rollback notes.
 - [Operations](operations.md): runtime configuration, observability, runbooks, and production concerns.
 - [Auth service TDD plan](auth-service-tdd-plan.md): incremental test-driven plan for the auth bounded context.
 
