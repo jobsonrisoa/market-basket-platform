@@ -5,6 +5,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 @Component
 class KafkaOutboxPublisher {
@@ -12,12 +15,17 @@ class KafkaOutboxPublisher {
   private final SpringDataOutboxEventRepository events;
   private final KafkaTemplate<String, String> kafka;
   private final Clock clock;
+  private final ObjectMapper objectMapper;
 
   KafkaOutboxPublisher(
-      SpringDataOutboxEventRepository events, KafkaTemplate<String, String> kafka, Clock clock) {
+      SpringDataOutboxEventRepository events,
+      KafkaTemplate<String, String> kafka,
+      Clock clock,
+      ObjectMapper objectMapper) {
     this.events = events;
     this.kafka = kafka;
     this.clock = clock;
+    this.objectMapper = objectMapper;
   }
 
   @Scheduled(fixedDelayString = "${auth.outbox.publish-delay:PT5S}")
@@ -37,16 +45,18 @@ class KafkaOutboxPublisher {
     }
   }
 
-  private String envelope(OutboxEventEntity event) {
-    return """
-        {"eventId":"%s","eventType":"%s","version":%d,"occurredAt":"%s","correlationId":"%s","payload":%s}\
-        """
-        .formatted(
-            event.eventId(),
-            event.eventType(),
-            event.version(),
-            event.occurredAt(),
-            event.correlationId(),
-            event.payload());
+  String envelope(OutboxEventEntity event) {
+    ObjectNode envelope = objectMapper.createObjectNode();
+    envelope.put("eventId", event.eventId().toString());
+    envelope.put("eventType", event.eventType());
+    envelope.put("version", event.version());
+    envelope.put("occurredAt", event.occurredAt().toString());
+    envelope.put("correlationId", event.correlationId());
+    try {
+      envelope.set("payload", objectMapper.readTree(event.payload()));
+      return objectMapper.writeValueAsString(envelope);
+    } catch (JacksonException exception) {
+      throw new IllegalStateException("Invalid outbox event payload JSON", exception);
+    }
   }
 }
