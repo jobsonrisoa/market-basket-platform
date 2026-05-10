@@ -56,6 +56,7 @@ class SellerControllerIntegrationTest {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.name").value("Fresh Market"))
             .andExpect(jsonPath("$.ownerUserId").value(ownerUserId.toString()))
+            .andExpect(jsonPath("$.approvalStatus").value("PENDING_REVIEW"))
             .andReturn();
 
     JsonNode created = objectMapper.readTree(createResult.getResponse().getContentAsString());
@@ -63,7 +64,8 @@ class SellerControllerIntegrationTest {
 
     mvc.perform(get("/sellers/{sellerId}", sellerId))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.id").value(sellerId));
+        .andExpect(jsonPath("$.id").value(sellerId))
+        .andExpect(jsonPath("$.approvalStatus").value("PENDING_REVIEW"));
 
     mvc.perform(get("/sellers/{sellerId}/members", sellerId))
         .andExpect(status().isOk())
@@ -93,6 +95,54 @@ class SellerControllerIntegrationTest {
         .andExpect(jsonPath("$", hasSize(2)))
         .andExpect(jsonPath("$[1].userId").value(staffUserId.toString()))
         .andExpect(jsonPath("$[1].status").value("REMOVED"));
+  }
+
+  @Test
+  void shouldReviewSeller() throws Exception {
+    UUID ownerUserId = UUID.randomUUID();
+    UUID reviewerUserId = UUID.randomUUID();
+    MvcResult createResult =
+        mvc.perform(
+                post("/sellers")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"name":"Fresh Market","ownerUserId":"%s"}
+                        """
+                            .formatted(ownerUserId)))
+            .andExpect(status().isCreated())
+            .andReturn();
+    String sellerId =
+        objectMapper
+            .readTree(createResult.getResponse().getContentAsString())
+            .path("id")
+            .stringValue();
+
+    mvc.perform(
+            post("/sellers/{sellerId}/approve", sellerId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"reviewerUserId":"%s","reviewNotes":"Ready for marketplace"}
+                    """
+                        .formatted(reviewerUserId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.approvalStatus").value("APPROVED"))
+        .andExpect(jsonPath("$.reviewedByUserId").value(reviewerUserId.toString()))
+        .andExpect(jsonPath("$.reviewNotes").value("Ready for marketplace"));
+
+    mvc.perform(
+            post("/sellers/{sellerId}/reject", sellerId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"reviewerUserId":"%s","reviewNotes":"Missing license"}
+                    """
+                        .formatted(reviewerUserId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.approvalStatus").value("REJECTED"))
+        .andExpect(jsonPath("$.reviewedByUserId").value(reviewerUserId.toString()))
+        .andExpect(jsonPath("$.reviewNotes").value("Missing license"));
   }
 
   @Test

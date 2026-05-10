@@ -31,7 +31,7 @@ The current implemented domain depth is concentrated in `auth-service`, with sel
 | --- | --- | --- |
 | `auth-service` | `market_auth` | Identity, credentials, access tokens, refresh tokens, OAuth2 login, JWKS, auth events. |
 | `customer-service` | `market_customer` | Customer profile and customer account domain. |
-| `seller-service` | `market_seller` | Seller store profile and staff membership foundation. |
+| `seller-service` | `market_seller` | Seller store profile, platform approval workflow, staff membership, and seller event contracts. |
 | `catalog-service` | `market_catalog` | Seller-owned categories, products, draft/published lifecycle, and catalog event contracts. |
 | `subscription-service` | `market_subscription` | Subscription plans and recurring customer relationships. |
 | `order-service` | `market_order` | Order placement and lifecycle. |
@@ -92,7 +92,7 @@ The auth service has an outbox persistence model and Kafka publisher. This allow
 - `auth.session.refresh_token_reused.v1`
 
 Event contracts should remain versioned. Consumers should be tolerant of additive fields.
-The first implemented event-governance mechanism is JSON Schema producer contract testing for auth events in auth-service. `OutboxEvent` carries structured payload fields, the JPA adapter serializes payload JSON for the outbox table, and the outbox publisher serializes Kafka envelopes with Jackson. Catalog-service now has a producer contract for `catalog.product.published.v1`; catalog outbox persistence and Kafka publishing remain deferred until consumers need the event at runtime. Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
+The first implemented event-governance mechanism is JSON Schema producer contract testing for auth events in auth-service. `OutboxEvent` carries structured payload fields, the JPA adapter serializes payload JSON for the outbox table, and the outbox publisher serializes Kafka envelopes with Jackson. Seller-service now has a producer contract for `seller.approved.v1`, and catalog-service has a producer contract for `catalog.product.published.v1`; seller/catalog outbox persistence and Kafka publishing remain deferred until consumers need those events at runtime. Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
 
 ## Data Ownership
 

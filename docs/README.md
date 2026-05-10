@@ -2,7 +2,7 @@
 
 This directory is the source of truth for product, architecture, delivery, and operations documentation for Market Basket Platform.
 
-Current domain implementation is deepest in auth, with seller membership and catalog foundations now implemented before the remaining commerce workflows are expanded.
+Current domain implementation is deepest in auth, with seller approval and membership plus catalog foundations now implemented before the remaining commerce workflows are expanded.
 
 ## Start Here
 

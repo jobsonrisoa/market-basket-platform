@@ -37,12 +37,12 @@ public class SellerService {
 
   @Transactional(readOnly = true)
   public SellerStoreEntity getStore(UUID sellerId) {
-    return stores.findById(sellerId).orElseThrow(() -> new SellerNotFoundException(sellerId));
+    return requireStore(sellerId);
   }
 
   @Transactional
   public SellerMembershipEntity addMember(UUID sellerId, UUID userId, SellerMembershipRole role) {
-    getStore(sellerId);
+    requireStore(sellerId);
     return memberships
         .findBySellerIdAndUserId(sellerId, userId)
         .map(
@@ -58,13 +58,13 @@ public class SellerService {
 
   @Transactional(readOnly = true)
   public List<SellerMembershipEntity> listMembers(UUID sellerId) {
-    getStore(sellerId);
+    requireStore(sellerId);
     return memberships.findBySellerIdOrderByCreatedAtAsc(sellerId);
   }
 
   @Transactional
   public void removeMember(UUID sellerId, UUID userId) {
-    getStore(sellerId);
+    requireStore(sellerId);
     memberships
         .findBySellerIdAndUserId(sellerId, userId)
         .ifPresent(
@@ -72,5 +72,23 @@ public class SellerService {
               membership.remove(clock.instant());
               memberships.save(membership);
             });
+  }
+
+  @Transactional
+  public SellerStoreEntity approveStore(UUID sellerId, UUID reviewerUserId, String reviewNotes) {
+    SellerStoreEntity store = requireStore(sellerId);
+    store.approve(reviewerUserId, reviewNotes, clock.instant());
+    return stores.save(store);
+  }
+
+  @Transactional
+  public SellerStoreEntity rejectStore(UUID sellerId, UUID reviewerUserId, String reviewNotes) {
+    SellerStoreEntity store = requireStore(sellerId);
+    store.reject(reviewerUserId, reviewNotes, clock.instant());
+    return stores.save(store);
+  }
+
+  private SellerStoreEntity requireStore(UUID sellerId) {
+    return stores.findById(sellerId).orElseThrow(() -> new SellerNotFoundException(sellerId));
   }
 }

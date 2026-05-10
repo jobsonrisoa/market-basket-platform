@@ -1,6 +1,7 @@
 package com.jobson.market.seller_service.web;
 
 import com.jobson.market.seller_service.application.SellerService;
+import com.jobson.market.seller_service.domain.SellerApprovalStatus;
 import com.jobson.market.seller_service.domain.SellerMembershipEntity;
 import com.jobson.market.seller_service.domain.SellerMembershipRole;
 import com.jobson.market.seller_service.domain.SellerMembershipStatus;
@@ -42,6 +43,20 @@ class SellerController {
     return SellerResponse.from(sellers.getStore(sellerId));
   }
 
+  @PostMapping("/{sellerId}/approve")
+  SellerResponse approveSeller(
+      @PathVariable UUID sellerId, @Valid @RequestBody ReviewSellerRequest request) {
+    return SellerResponse.from(
+        sellers.approveStore(sellerId, request.reviewerUserId(), request.reviewNotes()));
+  }
+
+  @PostMapping("/{sellerId}/reject")
+  SellerResponse rejectSeller(
+      @PathVariable UUID sellerId, @Valid @RequestBody ReviewSellerRequest request) {
+    return SellerResponse.from(
+        sellers.rejectStore(sellerId, request.reviewerUserId(), request.reviewNotes()));
+  }
+
   @PostMapping("/{sellerId}/members")
   ResponseEntity<SellerMembershipResponse> addMember(
       @PathVariable UUID sellerId, @Valid @RequestBody AddMemberRequest request) {
@@ -66,9 +81,29 @@ class SellerController {
 
   record AddMemberRequest(@NotNull UUID userId, @NotNull SellerMembershipRole role) {}
 
-  record SellerResponse(UUID id, String name, UUID ownerUserId, Instant createdAt) {
+  record ReviewSellerRequest(@NotNull UUID reviewerUserId, String reviewNotes) {}
+
+  record SellerResponse(
+      UUID id,
+      String name,
+      UUID ownerUserId,
+      SellerApprovalStatus approvalStatus,
+      Instant createdAt,
+      Instant submittedAt,
+      Instant reviewedAt,
+      UUID reviewedByUserId,
+      String reviewNotes) {
     static SellerResponse from(SellerStoreEntity store) {
-      return new SellerResponse(store.id(), store.name(), store.ownerUserId(), store.createdAt());
+      return new SellerResponse(
+          store.id(),
+          store.name(),
+          store.ownerUserId(),
+          store.approvalStatus(),
+          store.createdAt(),
+          store.submittedAt(),
+          store.reviewedAt(),
+          store.reviewedByUserId(),
+          store.reviewNotes());
     }
   }
 

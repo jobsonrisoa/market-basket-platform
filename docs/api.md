@@ -245,7 +245,49 @@ GET /sellers/{sellerId}
 
 Response: `200 OK`
 
-Returns the seller store id, name, owner user id, and creation timestamp.
+Returns the seller store id, name, owner user id, approval status, submission timestamp, and
+review details when present.
+
+### Approve Seller
+
+```http
+POST /sellers/{sellerId}/approve
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "reviewerUserId": "admin-user-uuid",
+  "reviewNotes": "Ready for marketplace"
+}
+```
+
+Response: `200 OK`
+
+Marks the seller store as `APPROVED`. Seller-service also has a JSON Schema producer contract for
+`seller.approved.v1`; runtime Kafka publishing is deferred.
+
+### Reject Seller
+
+```http
+POST /sellers/{sellerId}/reject
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "reviewerUserId": "admin-user-uuid",
+  "reviewNotes": "Missing license"
+}
+```
+
+Response: `200 OK`
+
+Marks the seller store as `REJECTED` with reviewer metadata.
 
 ### Add Seller Member
 

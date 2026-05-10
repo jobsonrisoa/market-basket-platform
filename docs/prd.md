@@ -284,9 +284,9 @@ The previous platform-hardening roadmap candidates now have initial implementati
    - Implemented: seller-owned products with draft, published, and unpublished lifecycle states.
    - Implemented: first catalog event contract, `catalog.product.published.v1`.
 2. Seller Approval
-   - Add seller store approval status and platform review workflow.
-   - Add the `seller.approved.v1` event contract.
-   - Keep catalog publishing approval-aware, with full enforcement refined in later authorization work.
+   - Implemented: seller stores now start in `PENDING_REVIEW` and can be approved or rejected by platform review endpoints.
+   - Implemented: first seller event contract, `seller.approved.v1`.
+   - Remaining: enforce seller approval during catalog publishing once inter-service authorization and seller lookup are added.
 3. Inventory Foundation
    - Add seller-managed stock records tied to catalog products.
    - Add availability and reservation groundwork for order and subscription workflows.
