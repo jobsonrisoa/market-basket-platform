@@ -53,7 +53,7 @@ class AdminUserManagementUseCaseTest {
         useCase.assignRole(new AssignRoleCommand(admin.id(), customer.id(), Role.SELLER_OWNER));
 
     assertTrue(updated.roles().contains(Role.SELLER_OWNER));
-    assertTrue(outbox.events.get(0).payload().contains("\"accountProfile\":\"SELLER\""));
+    assertEquals("SELLER", outbox.events.get(0).payload().get("accountProfile"));
   }
 
   @Test

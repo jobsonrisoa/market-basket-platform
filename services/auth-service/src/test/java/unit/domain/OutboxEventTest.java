@@ -9,6 +9,7 @@ import com.jobson.market.auth.domain.model.Email;
 import com.jobson.market.auth.domain.model.Role;
 import com.jobson.market.auth.domain.model.User;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -74,31 +75,34 @@ class OutboxEventTest {
 
     assertThrows(
         NullPointerException.class,
-        () -> new OutboxEvent(null, "id", "type", 1, occurredAt, "correlation", "{}"));
+        () -> new OutboxEvent(null, "id", "type", 1, occurredAt, "correlation", Map.of("id", "1")));
     assertThrows(
         IllegalArgumentException.class,
-        () -> new OutboxEvent(eventId, " ", "type", 1, occurredAt, "correlation", "{}"));
+        () ->
+            new OutboxEvent(eventId, " ", "type", 1, occurredAt, "correlation", Map.of("id", "1")));
     assertThrows(
         IllegalArgumentException.class,
-        () -> new OutboxEvent(eventId, "id", " ", 1, occurredAt, "correlation", "{}"));
+        () -> new OutboxEvent(eventId, "id", " ", 1, occurredAt, "correlation", Map.of("id", "1")));
     assertThrows(
         IllegalArgumentException.class,
-        () -> new OutboxEvent(eventId, "id", "type", 0, occurredAt, "correlation", "{}"));
+        () ->
+            new OutboxEvent(
+                eventId, "id", "type", 0, occurredAt, "correlation", Map.of("id", "1")));
     assertThrows(
         NullPointerException.class,
-        () -> new OutboxEvent(eventId, "id", "type", 1, null, "correlation", "{}"));
+        () -> new OutboxEvent(eventId, "id", "type", 1, null, "correlation", Map.of("id", "1")));
     assertThrows(
         IllegalArgumentException.class,
-        () -> new OutboxEvent(eventId, "id", "type", 1, occurredAt, " ", "{}"));
+        () -> new OutboxEvent(eventId, "id", "type", 1, occurredAt, " ", Map.of("id", "1")));
     assertThrows(
         IllegalArgumentException.class,
-        () -> new OutboxEvent(eventId, "id", "type", 1, occurredAt, "correlation", " "));
+        () -> new OutboxEvent(eventId, "id", "type", 1, occurredAt, "correlation", Map.of()));
   }
 
   private void assertEvent(OutboxEvent event, String eventType, String aggregateId) {
     assertEquals(eventType, event.eventType());
     assertEquals(aggregateId, event.aggregateId());
     assertEquals(1, event.version());
-    assertTrue(event.payload().contains(aggregateId));
+    assertTrue(event.payload().containsValue(aggregateId));
   }
 }

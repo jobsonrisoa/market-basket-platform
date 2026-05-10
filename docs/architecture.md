@@ -92,7 +92,7 @@ The auth service has an outbox persistence model and Kafka publisher. This allow
 - `auth.session.refresh_token_reused.v1`
 
 Event contracts should remain versioned. Consumers should be tolerant of additive fields.
-The first implemented event-governance mechanism is a JSON Schema producer contract test for `auth.user.registered.v1` in auth-service. The outbox publisher serializes the event envelope with Jackson and still uses JSON strings over Kafka; Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
+The first implemented event-governance mechanism is JSON Schema producer contract testing for auth events in auth-service. `OutboxEvent` carries structured payload fields, the JPA adapter serializes payload JSON for the outbox table, and the outbox publisher serializes Kafka envelopes with Jackson. Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
 
 ## Data Ownership
 

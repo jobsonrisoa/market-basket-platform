@@ -197,8 +197,11 @@ Specialist recommendation for this repository: choose JSON Schema plus contract 
 
 Implementation status:
 
-- `auth.user.registered.v1` has a JSON Schema producer contract test in `auth-service`.
+- Auth events have JSON Schema producer contract tests in `auth-service`, including registration, login, refresh-token, role-change, account-state, and Google account-link events.
+- `OutboxEvent` now carries structured payload fields, and the JPA outbox adapter serializes payloads to JSON for persistence.
 - `KafkaOutboxPublisher` now builds the event envelope with Jackson instead of string formatting.
+- A Testcontainers Kafka integration test proves pending outbox events are published with the expected topic, key, envelope, payload object, and published status.
+- Kafka, PostgreSQL, and Redis Testcontainers images are pinned in auth-service tests.
 - Schema Registry is intentionally deferred until multiple production consumers depend on shared topics or manual compatibility review becomes too expensive.
 
 Option comparison:
@@ -218,10 +221,8 @@ Specialist review brief:
 
 Repo-specific specialist concerns:
 
-- `OutboxEvent` currently builds nested payload JSON with string formatting. Move payload serialization to structured JSON before payloads become more complex.
 - `KafkaOutboxPublisher` currently sends each event to a topic named exactly like the event type, for example `auth.user.registered.v1`. Decide before production whether to keep one-topic-per-event-type or move to domain topics such as `auth.events` with `eventType` inside the envelope.
-- Existing contract tests prove one producer schema, but they do not yet prove broker publishing or consumer behavior.
-- Testcontainers Kafka dependencies already exist, but Kafka container tags should be pinned before Kafka integration tests become CI-critical.
+- Existing contract tests prove producer schemas and one broker publish path, but they do not yet prove consumer behavior.
 
 Concerns the specialist should explicitly evaluate:
 
@@ -238,14 +239,11 @@ Concerns the specialist should explicitly evaluate:
 
 Remaining event-contract plan:
 
-1. Add schemas and examples for the remaining auth events, starting with `auth.session.login_succeeded.v1` and `auth.session.login_failed.v1`.
-2. Refactor `OutboxEvent` payload creation to structured JSON before adding more event fields.
-3. Decide the topic strategy: event-type topics now versus domain topics such as `auth.events`.
-4. Add consumer contract tests in each consuming service using recorded example events.
-5. Add Testcontainers Kafka integration tests for at least one publish/consume path per workflow.
-6. Pin Kafka Testcontainers image versions before these tests become CI gates.
-7. Require compatibility checks in CI: additive optional fields are allowed in the same version; removed fields, renamed fields, type changes, and semantic changes require a new event version.
-8. Revisit Schema Registry when two or more services actively consume the same topic in production or when event evolution becomes difficult to review manually.
+1. Add recorded example event documents beside the schemas for consumer teams.
+2. Decide the topic strategy: event-type topics now versus domain topics such as `auth.events`.
+3. Add consumer contract tests in each consuming service using recorded example events.
+4. Require compatibility checks in CI: additive optional fields are allowed in the same version; removed fields, renamed fields, type changes, and semantic changes require a new event version.
+5. Revisit Schema Registry when two or more services actively consume the same topic in production or when event evolution becomes difficult to review manually.
 
 ### Production Database Migrations
 

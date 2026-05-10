@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://market-basket-platform/contracts/auth/user-role-assigned-v1.schema.json",
+  "title": "auth.user.role_assigned.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "version", "occurredAt", "correlationId", "payload"],
+  "properties": {
+    "eventId": {"type": "string", "format": "uuid"},
+    "eventType": {"const": "auth.user.role_assigned.v1"},
+    "version": {"const": 1},
+    "occurredAt": {"type": "string", "format": "date-time"},
+    "correlationId": {"type": "string", "minLength": 1},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["userId", "role", "accountProfile", "changedBy"],
+      "properties": {
+        "userId": {"type": "string", "format": "uuid"},
+        "role": {"type": "string"},
+        "accountProfile": {"type": "string"},
+        "changedBy": {"type": "string", "format": "uuid"}
+      }
+    }
+  }
+}

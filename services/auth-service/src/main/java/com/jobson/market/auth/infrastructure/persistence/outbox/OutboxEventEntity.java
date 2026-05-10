@@ -42,7 +42,7 @@ class OutboxEventEntity {
 
   protected OutboxEventEntity() {}
 
-  static OutboxEventEntity pending(OutboxEvent event) {
+  static OutboxEventEntity pending(OutboxEvent event, String payloadJson) {
     OutboxEventEntity entity = new OutboxEventEntity();
     entity.eventId = event.eventId();
     entity.aggregateId = event.aggregateId();
@@ -50,7 +50,7 @@ class OutboxEventEntity {
     entity.version = event.version();
     entity.occurredAt = event.occurredAt();
     entity.correlationId = event.correlationId();
-    entity.payload = event.payload();
+    entity.payload = payloadJson;
     entity.status = PENDING_STATUS;
     return entity;
   }
@@ -77,6 +77,10 @@ class OutboxEventEntity {
 
   String payload() {
     return payload;
+  }
+
+  String status() {
+    return status;
   }
 
   void markPublished(Instant publishedAt) {

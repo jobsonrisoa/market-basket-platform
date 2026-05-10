@@ -4,6 +4,8 @@ import com.jobson.market.auth.domain.model.Email;
 import com.jobson.market.auth.domain.model.Role;
 import com.jobson.market.auth.domain.model.User;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -14,7 +16,7 @@ public record OutboxEvent(
     int version,
     Instant occurredAt,
     String correlationId,
-    String payload) {
+    Map<String, Object> payload) {
 
   private static final String USER_REGISTERED = "auth.user.registered.v1";
   private static final String ROLE_ASSIGNED = "auth.user.role_assigned.v1";
@@ -27,8 +29,6 @@ public record OutboxEvent(
   private static final String REFRESH_TOKEN_ROTATED = "auth.session.refresh_token_rotated.v1";
   private static final String REFRESH_TOKEN_REUSED = "auth.session.refresh_token_reused.v1";
   private static final String SESSION_REVOKED = "auth.session.revoked.v1";
-  private static final String USER_EMAIL_PAYLOAD = "{\"userId\":\"%s\",\"email\":\"%s\"}";
-  private static final String REFRESH_TOKEN_PAYLOAD = "{\"userId\":\"%s\",\"familyId\":\"%s\"}";
 
   public OutboxEvent {
     Objects.requireNonNull(eventId, "eventId is required");
@@ -45,13 +45,13 @@ public record OutboxEvent(
     if (correlationId == null || correlationId.isBlank()) {
       throw new IllegalArgumentException("correlationId is required");
     }
-    if (payload == null || payload.isBlank()) {
+    if (payload == null || payload.isEmpty()) {
       throw new IllegalArgumentException("payload is required");
     }
+    payload = Map.copyOf(payload);
   }
 
   public static OutboxEvent userRegistered(User user) {
-    String payload = USER_EMAIL_PAYLOAD.formatted(user.id(), user.email().value());
     return new OutboxEvent(
         UUID.randomUUID(),
         user.id().toString(),
@@ -59,11 +59,10 @@ public record OutboxEvent(
         1,
         Instant.now(),
         UUID.randomUUID().toString(),
-        payload);
+        userEmailPayload(user));
   }
 
   public static OutboxEvent loginSucceeded(User user) {
-    String payload = USER_EMAIL_PAYLOAD.formatted(user.id(), user.email().value());
     return new OutboxEvent(
         UUID.randomUUID(),
         user.id().toString(),
@@ -71,11 +70,10 @@ public record OutboxEvent(
         1,
         Instant.now(),
         UUID.randomUUID().toString(),
-        payload);
+        userEmailPayload(user));
   }
 
   public static OutboxEvent loginFailed(Email email) {
-    String payload = "{\"email\":\"%s\"}".formatted(email.value());
     return new OutboxEvent(
         UUID.randomUUID(),
         email.value(),
@@ -83,7 +81,7 @@ public record OutboxEvent(
         1,
         Instant.now(),
         UUID.randomUUID().toString(),
-        payload);
+        payload("email", email.value()));
   }
 
   public static OutboxEvent roleAssigned(User user, Role role, UUID changedBy) {
@@ -104,9 +102,6 @@ public record OutboxEvent(
 
   private static OutboxEvent userRoleChanged(
       User user, Role role, UUID changedBy, String eventType) {
-    String payload =
-        "{\"userId\":\"%s\",\"role\":\"%s\",\"accountProfile\":\"%s\",\"changedBy\":\"%s\"}"
-            .formatted(user.id(), role, user.accountProfile(), changedBy);
     return new OutboxEvent(
         UUID.randomUUID(),
         user.id().toString(),
@@ -114,13 +109,18 @@ public record OutboxEvent(
         1,
         Instant.now(),
         UUID.randomUUID().toString(),
-        payload);
+        payload(
+            "userId",
+            user.id().toString(),
+            "role",
+            role.name(),
+            "accountProfile",
+            user.accountProfile().name(),
+            "changedBy",
+            changedBy.toString()));
   }
 
   private static OutboxEvent userStateChanged(User user, UUID changedBy, String eventType) {
-    String payload =
-        "{\"userId\":\"%s\",\"status\":\"%s\",\"changedBy\":\"%s\"}"
-            .formatted(user.id(), user.status(), changedBy);
     return new OutboxEvent(
         UUID.randomUUID(),
         user.id().toString(),
@@ -128,11 +128,16 @@ public record OutboxEvent(
         1,
         Instant.now(),
         UUID.randomUUID().toString(),
-        payload);
+        payload(
+            "userId",
+            user.id().toString(),
+            "status",
+            user.status().name(),
+            "changedBy",
+            changedBy.toString()));
   }
 
   public static OutboxEvent googleAccountLinked(User user) {
-    String payload = USER_EMAIL_PAYLOAD.formatted(user.id(), user.email().value());
     return new OutboxEvent(
         UUID.randomUUID(),
         user.id().toString(),
@@ -140,11 +145,10 @@ public record OutboxEvent(
         1,
         Instant.now(),
         UUID.randomUUID().toString(),
-        payload);
+        userEmailPayload(user));
   }
 
   public static OutboxEvent refreshTokenRotated(UUID userId, UUID familyId) {
-    String payload = REFRESH_TOKEN_PAYLOAD.formatted(userId, familyId);
     return new OutboxEvent(
         UUID.randomUUID(),
         userId.toString(),
@@ -152,11 +156,10 @@ public record OutboxEvent(
         1,
         Instant.now(),
         UUID.randomUUID().toString(),
-        payload);
+        refreshTokenPayload(userId, familyId));
   }
 
   public static OutboxEvent refreshTokenReused(UUID userId, UUID familyId) {
-    String payload = REFRESH_TOKEN_PAYLOAD.formatted(userId, familyId);
     return new OutboxEvent(
         UUID.randomUUID(),
         userId.toString(),
@@ -164,11 +167,10 @@ public record OutboxEvent(
         1,
         Instant.now(),
         UUID.randomUUID().toString(),
-        payload);
+        refreshTokenPayload(userId, familyId));
   }
 
   public static OutboxEvent sessionRevoked(UUID userId, UUID familyId) {
-    String payload = REFRESH_TOKEN_PAYLOAD.formatted(userId, familyId);
     return new OutboxEvent(
         UUID.randomUUID(),
         userId.toString(),
@@ -176,6 +178,25 @@ public record OutboxEvent(
         1,
         Instant.now(),
         UUID.randomUUID().toString(),
-        payload);
+        refreshTokenPayload(userId, familyId));
+  }
+
+  private static Map<String, Object> userEmailPayload(User user) {
+    return payload("userId", user.id().toString(), "email", user.email().value());
+  }
+
+  private static Map<String, Object> refreshTokenPayload(UUID userId, UUID familyId) {
+    return payload("userId", userId.toString(), "familyId", familyId.toString());
+  }
+
+  private static Map<String, Object> payload(Object... entries) {
+    if (entries.length % 2 != 0) {
+      throw new IllegalArgumentException("payload entries must be key-value pairs");
+    }
+    Map<String, Object> payload = new LinkedHashMap<>();
+    for (int index = 0; index < entries.length; index += 2) {
+      payload.put((String) entries[index], Objects.requireNonNull(entries[index + 1]));
+    }
+    return payload;
   }
 }

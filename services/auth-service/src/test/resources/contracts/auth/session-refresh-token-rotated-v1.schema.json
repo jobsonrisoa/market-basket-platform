@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://market-basket-platform/contracts/auth/session-refresh-token-rotated-v1.schema.json",
+  "title": "auth.session.refresh_token_rotated.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "version", "occurredAt", "correlationId", "payload"],
+  "properties": {
+    "eventId": {"type": "string", "format": "uuid"},
+    "eventType": {"const": "auth.session.refresh_token_rotated.v1"},
+    "version": {"const": 1},
+    "occurredAt": {"type": "string", "format": "date-time"},
+    "correlationId": {"type": "string", "minLength": 1},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["userId", "familyId"],
+      "properties": {
+        "userId": {"type": "string", "format": "uuid"},
+        "familyId": {"type": "string", "format": "uuid"}
+      }
+    }
+  }
+}
