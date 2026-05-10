@@ -107,5 +107,5 @@ The current workflow deploys the `main` image tag by default through Compose. Fo
 - Pin production deployments to SHA tags instead of mutable `main`.
 - Add dependency vulnerability scanning.
 - Add Docker image scanning.
-- Add migration checks once Flyway or Liquibase is introduced.
+- Add explicit migration validation checks, such as verifying Flyway info against each service database before deployment.
 - Add smoke tests after dev and prod deployment.

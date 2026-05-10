@@ -98,6 +98,7 @@ Event contracts should remain versioned. Consumers should be tolerant of additiv
 Each service owns its database and should be the only writer to its own schema. Cross-service data sharing should happen through APIs or events, not direct database joins.
 
 Local Compose creates all service databases from `infra/postgres/init.sql`.
+Flyway migrations stored in each service's `src/main/resources/db/migration` directory own schema creation and evolution. Hibernate validates mapped schemas instead of creating or updating production tables.
 
 ## Deployment Architecture
 
@@ -117,7 +118,7 @@ Images are tagged with both the Git SHA and `main` on pushes to `main`. Deployme
 ## Known Architecture Gaps
 
 - No centralized service discovery is defined.
-- No database migration tool is configured yet.
+- No dedicated pre-deployment migration job is configured yet; services currently run Flyway on startup.
 - No distributed tracing is configured yet.
 - No production Prometheus scrape configuration is committed yet.
 - No explicit inter-service authorization model is configured outside auth JWT issuance.

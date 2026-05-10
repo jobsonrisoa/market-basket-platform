@@ -253,14 +253,20 @@ Rationale:
 
 Implementation plan:
 
-1. Add `flyway-core` to each service that owns PostgreSQL tables.
+1. Add Flyway dependencies to each PostgreSQL-backed service.
 2. Store migrations under `src/main/resources/db/migration` in each service.
 3. Use service-specific migration histories because each service owns its own database, for example `market_auth`, `market_catalog`, and `market_order`.
-4. Convert any JPA auto-DDL behavior to validation-only in production; migrations must create and update production schema.
+4. Convert JPA auto-DDL behavior to validation-only; migrations must create and update schema in dev, CI, and production.
 5. Run Flyway automatically on service startup in dev and CI.
 6. For production, run migrations as a controlled release step before app rollout or as startup migrations only when deployment orchestration guarantees one migrator at a time.
 7. Add rollback practice through forward-only fix migrations rather than destructive down migrations.
 8. Require migration review for locking risk, data backfills, nullable-to-not-null transitions, indexes on large tables, and backward compatibility during rolling deploys.
+
+Implementation status:
+
+- Flyway is enabled for all PostgreSQL-backed services.
+- `auth-service` owns the first real schema migration for users, roles, OAuth accounts, refresh tokens, and outbox events.
+- Scaffold services include placeholder initial migrations so future domain migrations append cleanly without reintroducing Hibernate schema generation.
 
 ### Marketplace Domain Workflows
 

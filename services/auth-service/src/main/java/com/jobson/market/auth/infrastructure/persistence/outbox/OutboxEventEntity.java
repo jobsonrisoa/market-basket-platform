@@ -4,7 +4,6 @@ import com.jobson.market.auth.domain.event.OutboxEvent;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
@@ -33,8 +32,7 @@ class OutboxEventEntity {
   @Column(nullable = false)
   private String correlationId;
 
-  @Lob
-  @Column(nullable = false)
+  @Column(nullable = false, columnDefinition = "text")
   private String payload;
 
   @Column(nullable = false)

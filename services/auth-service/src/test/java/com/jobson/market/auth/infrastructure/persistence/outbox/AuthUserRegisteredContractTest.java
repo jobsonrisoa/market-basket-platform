@@ -37,24 +37,24 @@ class AuthUserRegisteredContractTest {
             getClass().getResourceAsStream("/contracts/auth/user-registered-v1.schema.json"));
 
     assertMatchesUserRegisteredSchema(envelope, schema);
-    assertEquals(user.id().toString(), envelope.at("/payload/userId").asText());
-    assertEquals(user.email().value(), envelope.at("/payload/email").asText());
+    assertEquals(user.id().toString(), envelope.at("/payload/userId").stringValue());
+    assertEquals(user.email().value(), envelope.at("/payload/email").stringValue());
   }
 
   private void assertMatchesUserRegisteredSchema(JsonNode envelope, JsonNode schema) {
-    assertEquals("auth.user.registered.v1", schema.path("title").asText());
-    assertEquals("auth.user.registered.v1", envelope.path("eventType").asText());
+    assertEquals("auth.user.registered.v1", schema.path("title").stringValue());
+    assertEquals("auth.user.registered.v1", envelope.path("eventType").stringValue());
     assertEquals(1, envelope.path("version").asInt());
     assertObjectHasOnlyFields(
         envelope, "eventId", "eventType", "version", "occurredAt", "correlationId", "payload");
     assertObjectHasOnlyFields(envelope.path("payload"), "userId", "email");
     assertRequiredFieldsExist(envelope, schema.path("required"));
     assertRequiredFieldsExist(envelope.path("payload"), schema.at("/properties/payload/required"));
-    assertIsUuid(envelope.path("eventId").asText());
-    assertIsUuid(envelope.at("/payload/userId").asText());
-    assertFalse(envelope.path("correlationId").asText().isBlank());
-    assertFalse(envelope.path("occurredAt").asText().isBlank());
-    assertTrue(envelope.at("/payload/email").asText().contains("@"));
+    assertIsUuid(envelope.path("eventId").stringValue());
+    assertIsUuid(envelope.at("/payload/userId").stringValue());
+    assertFalse(envelope.path("correlationId").stringValue().isBlank());
+    assertFalse(envelope.path("occurredAt").stringValue().isBlank());
+    assertTrue(envelope.at("/payload/email").stringValue().contains("@"));
   }
 
   private void assertObjectHasOnlyFields(JsonNode node, String... fields) {
@@ -68,7 +68,7 @@ class AuthUserRegisteredContractTest {
 
   private void assertRequiredFieldsExist(JsonNode node, JsonNode requiredFields) {
     requiredFields.forEach(
-        field -> assertTrue(node.has(field.asText()), "Missing field " + field.asText()));
+        field -> assertTrue(node.has(field.stringValue()), "Missing field " + field.stringValue()));
   }
 
   private void assertIsUuid(String value) {

@@ -150,6 +150,13 @@ Centralized log aggregation is not configured yet. Prefer structured JSON logs b
 3. Confirm the target database exists. Local databases are created by `infra/postgres/init.sql`.
 4. Confirm `POSTGRES_USER` and `POSTGRES_PASSWORD` match service environment variables.
 
+## Runbook: Flyway Migration Failure
+
+1. Inspect service logs for the failed migration version and SQL error.
+2. Confirm the service is connecting to its own database, for example `market_auth` for auth-service.
+3. Do not edit an already-applied migration in a shared environment; add a new forward-only fix migration.
+4. For local-only broken migration history, recreate the local PostgreSQL volume after confirming no useful local data needs to be kept.
+
 ## Runbook: Kafka Connection Failure
 
 1. Confirm Zookeeper and Kafka are running.
@@ -193,7 +200,7 @@ Production should define backups for PostgreSQL data volumes before handling rea
 
 ## Production Readiness Checklist
 
-- Replace `ddl-auto=update` with a migration tool such as Flyway or Liquibase.
+- Add migration smoke checks that verify Flyway histories after deployment.
 - Route Prometheus alerts through Alertmanager.
 - Add dashboard definitions for database, Kafka, and Redis health.
 - Pin production Compose deployments to immutable image tags.

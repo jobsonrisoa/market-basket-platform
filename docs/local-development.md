@@ -134,7 +134,7 @@ Auth variables:
 - `market_inventory`
 - `market_notification`
 
-Spring JPA currently defaults to `ddl-auto=update`, so local schemas are updated by Hibernate when services start.
+Flyway runs automatically when services start. Hibernate is configured for schema validation, so schema changes should be added as versioned SQL migrations under each service's `src/main/resources/db/migration` directory.
 
 ## Troubleshooting
 
