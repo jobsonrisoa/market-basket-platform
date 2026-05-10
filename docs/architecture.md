@@ -4,7 +4,7 @@
 
 Market Basket Platform is organized as a microservice backend. Each service is independently buildable, containerized, and configured through environment variables. Docker Compose provides a local and simple server runtime with PostgreSQL, MongoDB, Redis, Kafka, Kong Gateway, Prometheus, and Grafana.
 
-The current implemented domain depth is concentrated in `auth-service`, with the first seller store and membership foundation implemented in `seller-service`. The remaining services are Spring Boot bounded-context scaffolds with shared platform dependencies and deployment wiring.
+The current implemented domain depth is concentrated in `auth-service`, with seller store and membership foundations in `seller-service` and seller-owned category/product catalog foundations in `catalog-service`. The remaining services are Spring Boot bounded-context scaffolds with shared platform dependencies and deployment wiring.
 
 ## Technology Stack
 
@@ -32,7 +32,7 @@ The current implemented domain depth is concentrated in `auth-service`, with the
 | `auth-service` | `market_auth` | Identity, credentials, access tokens, refresh tokens, OAuth2 login, JWKS, auth events. |
 | `customer-service` | `market_customer` | Customer profile and customer account domain. |
 | `seller-service` | `market_seller` | Seller store profile and staff membership foundation. |
-| `catalog-service` | `market_catalog` | Product catalog domain. |
+| `catalog-service` | `market_catalog` | Seller-owned categories, products, draft/published lifecycle, and catalog event contracts. |
 | `subscription-service` | `market_subscription` | Subscription plans and recurring customer relationships. |
 | `order-service` | `market_order` | Order placement and lifecycle. |
 | `inventory-service` | `market_inventory` | Stock, reservations, and inventory adjustments. |
@@ -92,7 +92,7 @@ The auth service has an outbox persistence model and Kafka publisher. This allow
 - `auth.session.refresh_token_reused.v1`
 
 Event contracts should remain versioned. Consumers should be tolerant of additive fields.
-The first implemented event-governance mechanism is JSON Schema producer contract testing for auth events in auth-service. `OutboxEvent` carries structured payload fields, the JPA adapter serializes payload JSON for the outbox table, and the outbox publisher serializes Kafka envelopes with Jackson. Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
+The first implemented event-governance mechanism is JSON Schema producer contract testing for auth events in auth-service. `OutboxEvent` carries structured payload fields, the JPA adapter serializes payload JSON for the outbox table, and the outbox publisher serializes Kafka envelopes with Jackson. Catalog-service now has a producer contract for `catalog.product.published.v1`; catalog outbox persistence and Kafka publishing remain deferred until consumers need the event at runtime. Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
 
 ## Data Ownership
 

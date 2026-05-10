@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "catalog.product.published.v1",
+  "type": "object",
+  "required": ["eventId", "eventType", "version", "occurredAt", "correlationId", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "catalog.product.published.v1" },
+    "version": { "const": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "payload": {
+      "type": "object",
+      "required": [
+        "productId",
+        "sellerId",
+        "categoryId",
+        "name",
+        "unit",
+        "packageSize",
+        "priceAmount",
+        "currency",
+        "status"
+      ],
+      "properties": {
+        "productId": { "type": "string", "format": "uuid" },
+        "sellerId": { "type": "string", "format": "uuid" },
+        "categoryId": { "type": "string", "format": "uuid" },
+        "name": { "type": "string", "minLength": 1 },
+        "unit": { "type": "string", "minLength": 1 },
+        "packageSize": { "type": "string", "minLength": 1 },
+        "priceAmount": { "type": "number", "minimum": 0 },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+        "status": { "const": "PUBLISHED" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

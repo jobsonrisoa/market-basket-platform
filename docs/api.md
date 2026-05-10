@@ -286,3 +286,158 @@ DELETE /sellers/{sellerId}/members/{userId}
 Response: `204 No Content`
 
 Marks the membership as `REMOVED`.
+
+## Catalog Service
+
+Base URL in local Compose: `http://localhost:8082`
+
+These endpoints intentionally accept explicit seller ids until service-to-service authorization is implemented.
+
+### Create Category
+
+```http
+POST /catalog/categories
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "name": "Produce"
+}
+```
+
+Response: `201 Created`
+
+Creates a service-owned catalog category.
+
+### List Categories
+
+```http
+GET /catalog/categories
+```
+
+Response: `200 OK`
+
+Returns categories ordered by name.
+
+### Get Category
+
+```http
+GET /catalog/categories/{categoryId}
+```
+
+Response: `200 OK`
+
+Returns the category id, name, and timestamps.
+
+### Rename Category
+
+```http
+PATCH /catalog/categories/{categoryId}
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "name": "Seasonal Produce"
+}
+```
+
+Response: `200 OK`
+
+Renames the category.
+
+### Create Product
+
+```http
+POST /catalog/products
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "sellerId": "seller-uuid",
+  "categoryId": "category-uuid",
+  "name": "Organic Carrots",
+  "description": "Fresh carrots",
+  "unit": "kg",
+  "packageSize": "1 kg bag",
+  "priceAmount": 7.50,
+  "currency": "USD"
+}
+```
+
+Response: `201 Created`
+
+Creates a seller-owned product in `DRAFT` status.
+
+### Get Product
+
+```http
+GET /catalog/products/{productId}
+```
+
+Response: `200 OK`
+
+Returns product details, price, lifecycle status, and timestamps.
+
+### List Seller Products
+
+```http
+GET /catalog/products?sellerId={sellerId}&status=DRAFT
+```
+
+Response: `200 OK`
+
+Returns products for the seller. The `status` query parameter is optional.
+
+### Update Product
+
+```http
+PATCH /catalog/products/{productId}
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "categoryId": "category-uuid",
+  "name": "Rainbow Carrots",
+  "description": "Colorful carrots",
+  "unit": "bundle",
+  "packageSize": "6 count",
+  "priceAmount": 9.25,
+  "currency": "BRL"
+}
+```
+
+Response: `200 OK`
+
+Updates product details while preserving the product's seller owner.
+
+### Publish Product
+
+```http
+POST /catalog/products/{productId}/publish
+```
+
+Response: `200 OK`
+
+Changes the product status to `PUBLISHED`. Catalog-service also has a JSON Schema producer contract for `catalog.product.published.v1`; runtime Kafka publishing is deferred.
+
+### Unpublish Product
+
+```http
+POST /catalog/products/{productId}/unpublish
+```
+
+Response: `200 OK`
+
+Changes the product status to `UNPUBLISHED`.

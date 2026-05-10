@@ -55,7 +55,7 @@ The first implementation focus is the authentication foundation: users can regis
 ## Future Scope
 
 - Customer profile management.
-- Product catalog CRUD and search.
+- Product catalog search and read-model optimization.
 - Subscription plan and renewal workflows.
 - Basket, checkout, and order lifecycle.
 - Inventory reservation and stock adjustment.
@@ -78,6 +78,8 @@ The first implementation focus is the authentication foundation: users can regis
 | Auth | Expose marketplace roles and permissions in auth responses and JWT claims. | Implemented in `auth-service`. |
 | Auth | Allow authorized admins to assign and revoke roles, suspend users, and reactivate users. | Implemented in `auth-service`. |
 | Seller | Create seller stores and manage owner/staff memberships. | Implemented in `seller-service`. |
+| Catalog | Create categories and seller-owned products with draft, published, and unpublished lifecycle states. | Implemented in `catalog-service`. |
+| Catalog | Define the first catalog product-published event contract. | Implemented as JSON Schema producer contract tests in `catalog-service`. |
 | Platform | Build and test every service on PRs to `main`. | Implemented through GitHub Actions. |
 | Platform | Validate every service Flyway migration set against PostgreSQL on PRs to `main`. | Implemented through GitHub Actions. |
 | Platform | Publish service images on `main`. | Implemented through GitHub Actions. |
@@ -275,12 +277,12 @@ Remaining production migration work:
 
 ### Next Implementation Path
 
-The previous platform-hardening roadmap candidates now have initial implementation. Auth, event contracts, Flyway migrations, deployment migration gates, seller membership, immutable image deployment, and smoke checks are in place. The product roadmap should now shift from platform foundation toward marketplace domain depth.
+The previous platform-hardening roadmap candidates now have initial implementation. Auth, event contracts, Flyway migrations, deployment migration gates, seller membership, catalog foundation, immutable image deployment, and smoke checks are in place. The product roadmap should continue shifting from platform foundation toward marketplace domain depth.
 
 1. Catalog Foundation
-   - Add product and category CRUD foundation in `catalog-service`.
-   - Model seller-owned products with draft and published lifecycle states.
-   - Add the first catalog event contract, `catalog.product.published.v1`.
+   - Implemented: product and category CRUD foundation in `catalog-service`.
+   - Implemented: seller-owned products with draft, published, and unpublished lifecycle states.
+   - Implemented: first catalog event contract, `catalog.product.published.v1`.
 2. Seller Approval
    - Add seller store approval status and platform review workflow.
    - Add the `seller.approved.v1` event contract.

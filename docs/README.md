@@ -2,6 +2,8 @@
 
 This directory is the source of truth for product, architecture, delivery, and operations documentation for Market Basket Platform.
 
+Current domain implementation is deepest in auth, with seller membership and catalog foundations now implemented before the remaining commerce workflows are expanded.
+
 ## Start Here
 
 - [Product requirements](prd.md): product goals, users, scope, non-goals, and release criteria.
