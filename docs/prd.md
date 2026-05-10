@@ -273,14 +273,24 @@ Remaining production migration work:
 - Keep rollback practice forward-only: add fix migrations rather than destructive down migrations.
 - Require migration review for locking risk, data backfills, nullable-to-not-null transitions, indexes on large tables, and backward compatibility during rolling deploys.
 
-### Next Implementation Candidates
+### Next Implementation Path
 
-The repository is currently strongest in the auth and platform foundation layers. The next decision should choose one of these slices:
+The previous platform-hardening roadmap candidates now have initial implementation. Auth, event contracts, Flyway migrations, deployment migration gates, seller membership, immutable image deployment, and smoke checks are in place. The product roadmap should now shift from platform foundation toward marketplace domain depth.
 
-| Candidate | Why now | Main trade-off |
-| --- | --- | --- |
-| Kafka event-contract hardening | Builds on the first `auth.user.registered.v1` contract and reduces cross-service integration risk before consumers appear. | More test and schema discipline before there is much event volume. |
-All four roadmap candidates in this section have an initial implementation. Next planning should choose between deepening seller workflows, adding consumer-side event contracts, or improving production observability.
+1. Catalog Foundation
+   - Add product and category CRUD foundation in `catalog-service`.
+   - Model seller-owned products with draft and published lifecycle states.
+   - Add the first catalog event contract, `catalog.product.published.v1`.
+2. Seller Approval
+   - Add seller store approval status and platform review workflow.
+   - Add the `seller.approved.v1` event contract.
+   - Keep catalog publishing approval-aware, with full enforcement refined in later authorization work.
+3. Inventory Foundation
+   - Add seller-managed stock records tied to catalog products.
+   - Add availability and reservation groundwork for order and subscription workflows.
+   - Add stock and reservation event contracts as the inventory model stabilizes.
+
+Consumer-side event contracts, production observability, and inter-service authorization remain important platform-hardening tracks, but they are not prerequisites for the next catalog slice.
 
 ### Marketplace Domain Workflows
 
