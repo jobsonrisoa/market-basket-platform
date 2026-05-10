@@ -483,3 +483,88 @@ POST /catalog/products/{productId}/unpublish
 Response: `200 OK`
 
 Changes the product status to `UNPUBLISHED`.
+
+## Inventory Service
+
+Base URL in local Compose: `http://localhost:8085`
+
+These endpoints intentionally accept explicit seller and product ids until service-to-service
+authorization and catalog lookups are implemented.
+
+### Upsert Stock
+
+```http
+POST /inventory/stocks
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "sellerId": "seller-uuid",
+  "productId": "product-uuid",
+  "onHandQuantity": 25.5,
+  "unit": "kg"
+}
+```
+
+Response: `201 Created`
+
+Creates or replaces the stock quantity for a seller/product pair. Availability is derived as
+`onHandQuantity - reservedQuantity`.
+
+### Get Stock
+
+```http
+GET /inventory/stocks/{stockId}
+```
+
+Response: `200 OK`
+
+Returns on-hand, reserved, and available quantities for the stock record.
+
+### List Seller Stock
+
+```http
+GET /inventory/stocks?sellerId={sellerId}
+```
+
+Response: `200 OK`
+
+Returns stock records owned by the seller.
+
+### Reserve Stock
+
+```http
+POST /inventory/reservations
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "stockId": "stock-uuid",
+  "quantity": 4.5,
+  "requestedBy": "order-service",
+  "referenceId": "order-123"
+}
+```
+
+Response: `201 Created`
+
+Creates an `ACTIVE` reservation and reduces available stock. Inventory-service has a JSON Schema
+producer contract for `inventory.stock_reserved.v1`; runtime Kafka publishing is deferred.
+
+### Release Reservation
+
+```http
+POST /inventory/reservations/{reservationId}/release
+```
+
+Response: `200 OK`
+
+Marks an active reservation as `RELEASED` and returns its quantity to availability. Inventory-service
+has a JSON Schema producer contract for `inventory.reservation_released.v1`; runtime Kafka publishing
+is deferred.

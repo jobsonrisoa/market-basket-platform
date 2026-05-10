@@ -78,8 +78,11 @@ The first implementation focus is the authentication foundation: users can regis
 | Auth | Expose marketplace roles and permissions in auth responses and JWT claims. | Implemented in `auth-service`. |
 | Auth | Allow authorized admins to assign and revoke roles, suspend users, and reactivate users. | Implemented in `auth-service`. |
 | Seller | Create seller stores and manage owner/staff memberships. | Implemented in `seller-service`. |
+| Seller | Approve or reject seller stores through platform review. | Implemented in `seller-service`. |
 | Catalog | Create categories and seller-owned products with draft, published, and unpublished lifecycle states. | Implemented in `catalog-service`. |
 | Catalog | Define the first catalog product-published event contract. | Implemented as JSON Schema producer contract tests in `catalog-service`. |
+| Inventory | Manage seller stock and reservation availability groundwork. | Implemented in `inventory-service`. |
+| Inventory | Define stock reservation and release event contracts. | Implemented as JSON Schema producer contract tests in `inventory-service`. |
 | Platform | Build and test every service on PRs to `main`. | Implemented through GitHub Actions. |
 | Platform | Validate every service Flyway migration set against PostgreSQL on PRs to `main`. | Implemented through GitHub Actions. |
 | Platform | Publish service images on `main`. | Implemented through GitHub Actions. |
@@ -288,11 +291,12 @@ The previous platform-hardening roadmap candidates now have initial implementati
    - Implemented: first seller event contract, `seller.approved.v1`.
    - Remaining: enforce seller approval during catalog publishing once inter-service authorization and seller lookup are added.
 3. Inventory Foundation
-   - Add seller-managed stock records tied to catalog products.
-   - Add availability and reservation groundwork for order and subscription workflows.
-   - Add stock and reservation event contracts as the inventory model stabilizes.
+   - Implemented: seller-managed stock records tied to catalog product ids.
+   - Implemented: availability and reservation groundwork for order and subscription workflows.
+   - Implemented: first inventory event contracts, `inventory.stock_reserved.v1` and `inventory.reservation_released.v1`.
+   - Remaining: reservation commit/expiry and order-driven stock decrement behavior.
 
-Consumer-side event contracts, production observability, and inter-service authorization remain important platform-hardening tracks, but they are not prerequisites for the next catalog slice.
+Consumer-side event contracts, production observability, and inter-service authorization remain important platform-hardening tracks, but they are not prerequisites for the next domain slice.
 
 ### Marketplace Domain Workflows
 

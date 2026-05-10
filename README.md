@@ -12,7 +12,7 @@ Market Basket Platform is a Spring Boot microservice system for a grocery or mar
 | `catalog-service` | 8082 | Seller-owned category and product catalog foundation. |
 | `subscription-service` | 8083 | Subscription bounded context scaffold. |
 | `order-service` | 8084 | Order bounded context scaffold. |
-| `inventory-service` | 8085 | Inventory bounded context scaffold. |
+| `inventory-service` | 8085 | Seller stock and reservation foundation. |
 | `notification-service` | 8086 | Notification bounded context scaffold. |
 
 Each service is a Java 17 Spring Boot application with Maven wrapper support, Spotless formatting, Actuator, JPA, Flyway, Redis, Kafka, validation, Web MVC, PostgreSQL, and Testcontainers-based test dependencies. The auth service also includes Spring Security, OAuth2 resource server/client support, JWT infrastructure, password hashing, refresh tokens, and an outbox publisher.
