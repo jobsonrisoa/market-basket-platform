@@ -80,9 +80,11 @@ export IMAGE_TAG="<git-sha>"
 docker compose pull
 docker compose up -d --remove-orphans
 docker compose ps
-curl --fail --retry 12 --retry-delay 5 http://localhost:8080/actuator/health
-curl --fail --retry 12 --retry-delay 5 http://localhost:8000/.well-known/jwks.json
-curl --fail --retry 12 --retry-delay 5 http://localhost:9090/-/ready
+curl --fail --retry 12 --retry-connrefused --retry-delay 5 http://localhost:8080/actuator/health
+curl --fail --retry 12 --retry-connrefused --retry-delay 5 http://localhost:8000/.well-known/jwks.json
+curl --fail --retry 12 --retry-connrefused --retry-delay 5 http://localhost:9090/-/ready
+curl --fail --retry 12 --retry-connrefused --retry-delay 5 http://localhost:9090/api/v1/targets
+curl --fail --retry 12 --retry-connrefused --retry-delay 5 http://localhost:9093/-/ready
 ```
 
 `scripts/run-migrations.sh` starts PostgreSQL, waits for health, creates any missing service databases, and runs each service's pinned Flyway runner with `migrate`, `validate`, and `info`. It never runs `clean`. The deployment runners allow `baselineOnMigrate` so environments that already had pre-Flyway schemas can adopt Flyway history; CI validation remains strict against fresh databases. Application startup migrations remain enabled as a safety net after the controlled pre-rollout migration step.
@@ -90,6 +92,8 @@ curl --fail --retry 12 --retry-delay 5 http://localhost:9090/-/ready
 Dev auto-deploy uses the Docker Images workflow head SHA as `IMAGE_TAG`. Manual dev and prod deployments require an `image_tag` input; production should use a Git SHA tag that was already published by the Docker Images workflow.
 
 Dev deploys automatically after the Docker Images workflow succeeds on `main`. Prod deploys manually and should be protected by the GitHub `prod` environment.
+
+Deployment smoke checks now verify container state, auth health, auth JWKS through Kong, Prometheus readiness, Prometheus target discovery, and Alertmanager readiness. Prometheus scrapes application Actuator metrics, Kong, PostgreSQL, Redis, and Kafka exporters from the deployed Compose network.
 
 ## Required Secrets
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Market Basket Platform is organized as a microservice backend. Each service is independently buildable, containerized, and configured through environment variables. Docker Compose provides a local and simple server runtime with PostgreSQL, MongoDB, Redis, Kafka, Kong Gateway, Prometheus, and Grafana.
+Market Basket Platform is organized as a microservice backend. Each service is independently buildable, containerized, and configured through environment variables. Docker Compose provides a local and simple server runtime with PostgreSQL, MongoDB, Redis, Kafka, Kong Gateway, Prometheus, Alertmanager, and Grafana.
 
 The current implemented domain depth is concentrated in `auth-service`, with seller store and membership foundations in `seller-service` and seller-owned category/product catalog foundations in `catalog-service`. The remaining services are Spring Boot bounded-context scaffolds with shared platform dependencies and deployment wiring.
 
@@ -23,7 +23,7 @@ The current implemented domain depth is concentrated in `auth-service`, with sel
 | Containers | Docker, Docker Compose |
 | Registry | GitHub Container Registry |
 | CI/CD | GitHub Actions |
-| Observability | Spring Actuator, Prometheus, Grafana |
+| Observability | Spring Actuator, Prometheus, Alertmanager, Grafana |
 
 ## Service Boundaries
 
@@ -45,7 +45,7 @@ The current implemented domain depth is concentrated in `auth-service`, with sel
 - Kafka 7.6.1 is available to every service on `kafka:29092` inside Compose and `localhost:9092` on the host.
 - Kong Gateway fronts public HTTP APIs on `localhost:8000` with declarative DB-less configuration from `infra/kong/kong.yml`.
 - MongoDB 7 is provisioned, but no current service configuration in this repo consumes it.
-- Prometheus and Grafana containers are provisioned for monitoring. Prometheus scrapes Spring Actuator metrics and Kong status metrics.
+- Prometheus, Alertmanager, and Grafana containers are provisioned for monitoring. Prometheus scrapes Spring Actuator metrics, Kong status metrics, and PostgreSQL, Redis, and Kafka exporters.
 
 ## Auth Service Internal Architecture
 
@@ -122,5 +122,4 @@ Images are tagged with both the Git SHA and `main` on pushes to `main`. Deployme
 - No centralized service discovery is defined.
 - Startup Flyway remains enabled as a safety net while deployment-time migration execution matures.
 - No distributed tracing is configured yet.
-- No production Prometheus scrape configuration is committed yet.
 - No explicit inter-service authorization model is configured outside auth JWT issuance.

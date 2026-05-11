@@ -11,7 +11,8 @@ Common service dependencies:
 - Kafka: available to every service.
 - Kong Gateway: public local entry point for HTTP APIs.
 - Prometheus: scrapes service Actuator metrics from `infra/prometheus/prometheus.yml`.
-- Grafana: provisioned with a Prometheus datasource and the `Market Services` dashboard.
+- Alertmanager: routes Prometheus alerts through `infra/alertmanager/alertmanager.yml`.
+- Grafana: provisioned with a Prometheus datasource and market service/infrastructure dashboards.
 - Sentry: optional error and tracing sink configured by environment variables.
 
 Observability environment variables:
@@ -22,6 +23,7 @@ Observability environment variables:
 - `SENTRY_TRACES_SAMPLE_RATE`: distributed tracing sample rate, defaults to `0.0`.
 - `GRAFANA_ADMIN_USER`: local Grafana admin user, defaults to `admin`.
 - `GRAFANA_ADMIN_PASSWORD`: local Grafana admin password, defaults to `admin`.
+- Alert routing: local Compose mounts `infra/alertmanager/alertmanager.yml` with a placeholder webhook URL. Production should mount an environment-specific Alertmanager config that points to Slack, PagerDuty, or another incident route without committing secrets.
 
 ## Health Checks
 
@@ -63,7 +65,7 @@ http://localhost:9090
 ```
 
 Prometheus scrapes every service at `/actuator/prometheus` through Docker Compose DNS. The scrape targets are defined in `infra/prometheus/prometheus.yml`.
-Kong metrics are exposed from the Kong status listener and scraped by Prometheus.
+Kong metrics are exposed from the Kong status listener and scraped by Prometheus. PostgreSQL, Redis, and Kafka metrics are scraped through dedicated exporters in Docker Compose.
 
 Useful local checks:
 
@@ -72,6 +74,8 @@ curl http://localhost:8080/actuator/prometheus
 curl http://localhost:8000/.well-known/jwks.json
 curl http://localhost:8100/status
 curl http://localhost:9090/-/ready
+curl http://localhost:9090/api/v1/targets
+curl http://localhost:9093/-/ready
 ```
 
 ## Dashboards
@@ -87,6 +91,7 @@ Default local credentials are `admin` / `admin` unless overridden. Grafana provi
 - Datasource: `Prometheus`
 - Dashboard folder: `Market Basket`
 - Dashboard: `Market Services`
+- Dashboard: `Market Infrastructure`
 
 ## Alerts
 
@@ -98,8 +103,12 @@ Current local alerts:
 - `MarketServiceHighErrorRate`: more than 5% of HTTP responses are 5xx for 5 minutes.
 - `MarketServiceHighLatencyP95`: HTTP p95 latency is above 1 second for 5 minutes.
 - `MarketServiceHighHeapUsage`: JVM heap usage is above 85% for 10 minutes.
+- `MarketPostgreSQLUnavailable`: PostgreSQL exporter or database is unavailable.
+- `MarketRedisUnavailable`: Redis exporter or server is unavailable.
+- `MarketKafkaUnavailable`: Kafka exporter or broker is unavailable.
+- `MarketMigrationRunnerFailure`: migration runner visibility is missing after deployment.
 
-No Alertmanager service is configured yet, so alerts are visible in Prometheus but are not routed to email, Slack, PagerDuty, or Sentry.
+Alertmanager is available at `http://localhost:9093`. The committed route points at a local placeholder webhook. Production environments should mount an environment-specific Alertmanager config with a real Slack, PagerDuty, incident-management, or webhook bridge endpoint.
 
 ## Error Tracking
 
@@ -142,7 +151,7 @@ Centralized log aggregation is not configured yet. Prefer structured JSON logs b
 4. Confirm required environment variables are present on the host.
 5. Confirm the image tag exists in GitHub Container Registry.
 6. Restart the service with `docker compose up -d <service>`.
-7. Re-run deployment smoke checks for auth health, JWKS through Kong, and Prometheus readiness.
+7. Re-run deployment smoke checks for auth health, JWKS through Kong, Prometheus readiness, Prometheus targets, and Alertmanager readiness.
 
 ## Runbook: Database Connection Failure
 
@@ -183,6 +192,13 @@ Centralized log aggregation is not configured yet. Prefer structured JSON logs b
 3. In Grafana, confirm the `Prometheus` datasource points to `http://prometheus:9090`.
 4. Confirm services were rebuilt after adding `micrometer-registry-prometheus`.
 
+## Runbook: Alertmanager Not Routing Alerts
+
+1. Confirm Alertmanager is healthy at `http://localhost:9093/-/ready`.
+2. Confirm Prometheus has Alertmanager discovery at `http://localhost:9090/status`.
+3. Confirm the deployed Alertmanager config mounts an environment-specific receiver URL.
+4. Inspect `docker compose logs -f alertmanager` for notification delivery errors.
+
 ## Security Operations
 
 - Treat JWT signing configuration as sensitive production configuration.
@@ -204,11 +220,9 @@ Production should define backups for PostgreSQL data volumes before handling rea
 
 ## Production Readiness Checklist
 
-- Add migration smoke checks that verify Flyway histories after deployment.
-- Route Prometheus alerts through Alertmanager.
-- Add dashboard definitions for database, Kafka, and Redis health.
 - Add HTTPS in front of Kong Gateway.
 - Add centralized structured logs.
 - Add secret management outside plain environment files.
 - Add rate limiting for auth endpoints.
-- Add smoke tests after deployment.
+- Add distributed tracing.
+- Add authenticated alert routes for production incident channels.
