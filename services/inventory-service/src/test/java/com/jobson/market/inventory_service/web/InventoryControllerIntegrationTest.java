@@ -1,6 +1,7 @@
 package com.jobson.market.inventory_service.web;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -17,8 +18,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -46,6 +49,7 @@ class InventoryControllerIntegrationTest {
     MvcResult stockResult =
         mvc.perform(
                 post("/inventory/stocks")
+                    .with(sellerJwt())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         """
@@ -66,11 +70,11 @@ class InventoryControllerIntegrationTest {
     JsonNode stock = objectMapper.readTree(stockResult.getResponse().getContentAsString());
     String stockId = stock.path("id").stringValue();
 
-    mvc.perform(get("/inventory/stocks/{stockId}", stockId))
+    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(stockId));
 
-    mvc.perform(get("/inventory/stocks").param("sellerId", sellerId.toString()))
+    mvc.perform(get("/inventory/stocks").param("sellerId", sellerId.toString()).with(sellerJwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(1)))
         .andExpect(jsonPath("$[0].id").value(stockId));
@@ -78,6 +82,7 @@ class InventoryControllerIntegrationTest {
     MvcResult reservationResult =
         mvc.perform(
                 post("/inventory/reservations")
+                    .with(serviceJwt())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         """
@@ -98,16 +103,18 @@ class InventoryControllerIntegrationTest {
         objectMapper.readTree(reservationResult.getResponse().getContentAsString());
     String reservationId = reservation.path("id").stringValue();
 
-    mvc.perform(get("/inventory/stocks/{stockId}", stockId))
+    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.reservedQuantity").value(4.5))
         .andExpect(jsonPath("$.availableQuantity").value(21.0));
 
-    mvc.perform(post("/inventory/reservations/{reservationId}/release", reservationId))
+    mvc.perform(
+            post("/inventory/reservations/{reservationId}/release", reservationId)
+                .with(serviceJwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("RELEASED"));
 
-    mvc.perform(get("/inventory/stocks/{stockId}", stockId))
+    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.reservedQuantity").value(0))
         .andExpect(jsonPath("$.availableQuantity").value(25.5));
@@ -115,7 +122,28 @@ class InventoryControllerIntegrationTest {
 
   @Test
   void shouldReturnNotFoundForMissingStock() throws Exception {
-    mvc.perform(get("/inventory/stocks/{stockId}", UUID.randomUUID()))
+    mvc.perform(get("/inventory/stocks/{stockId}", UUID.randomUUID()).with(sellerJwt()))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void shouldRequireAuthorizedRoleForInventoryApis() throws Exception {
+    mvc.perform(get("/inventory/stocks/{stockId}", UUID.randomUUID()))
+        .andExpect(status().isUnauthorized());
+
+    mvc.perform(get("/inventory/stocks/{stockId}", UUID.randomUUID()).with(customerJwt()))
+        .andExpect(status().isForbidden());
+  }
+
+  private static RequestPostProcessor sellerJwt() {
+    return jwt().authorities(new SimpleGrantedAuthority("ROLE_SELLER_OWNER"));
+  }
+
+  private static RequestPostProcessor serviceJwt() {
+    return jwt().authorities(new SimpleGrantedAuthority("ROLE_SERVICE"));
+  }
+
+  private static RequestPostProcessor customerJwt() {
+    return jwt().authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"));
   }
 }

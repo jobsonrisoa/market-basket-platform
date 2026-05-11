@@ -80,6 +80,7 @@ Persistence entities include:
 - Refresh tokens are opaque secrets returned to clients and also set as an HTTP-only cookie by login and refresh responses.
 - Refresh-token reuse revokes the whole token family.
 - JWKS is exposed from `/.well-known/jwks.json` so downstream services can validate JWTs without calling the auth service for every request.
+- Seller-service, catalog-service, and inventory-service validate auth-service JWTs through JWKS and require role-based access on protected business APIs. Public catalog reads remain open. Resource ownership checks that combine JWT roles with seller memberships remain a later authorization refinement.
 
 ## Eventing
 
@@ -122,4 +123,4 @@ Images are tagged with both the Git SHA and `main` on pushes to `main`. Deployme
 - No centralized service discovery is defined.
 - Startup Flyway remains enabled as a safety net while deployment-time migration execution matures.
 - No distributed tracing is configured yet.
-- No explicit inter-service authorization model is configured outside auth JWT issuance.
+- Resource ownership enforcement across services is still minimal; current downstream authorization gates by JWT role before deeper seller-membership lookups are introduced.

@@ -1,6 +1,7 @@
 package com.jobson.market.catalog_service.web;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -18,8 +19,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -46,6 +49,7 @@ class CatalogControllerIntegrationTest {
     MvcResult categoryResult =
         mvc.perform(
                 post("/catalog/categories")
+                    .with(sellerJwt())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"name\":\"Produce\"}"))
             .andExpect(status().isCreated())
@@ -62,6 +66,7 @@ class CatalogControllerIntegrationTest {
 
     mvc.perform(
             patch("/catalog/categories/{categoryId}", categoryId)
+                .with(sellerJwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Seasonal Produce\"}"))
         .andExpect(status().isOk())
@@ -70,6 +75,7 @@ class CatalogControllerIntegrationTest {
     MvcResult productResult =
         mvc.perform(
                 post("/catalog/products")
+                    .with(sellerJwt())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         """
@@ -108,6 +114,7 @@ class CatalogControllerIntegrationTest {
 
     mvc.perform(
             patch("/catalog/products/{productId}", productId)
+                .with(sellerJwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
@@ -126,11 +133,11 @@ class CatalogControllerIntegrationTest {
         .andExpect(jsonPath("$.name").value("Rainbow Carrots"))
         .andExpect(jsonPath("$.currency").value("BRL"));
 
-    mvc.perform(post("/catalog/products/{productId}/publish", productId))
+    mvc.perform(post("/catalog/products/{productId}/publish", productId).with(sellerJwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("PUBLISHED"));
 
-    mvc.perform(post("/catalog/products/{productId}/unpublish", productId))
+    mvc.perform(post("/catalog/products/{productId}/unpublish", productId).with(sellerJwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("UNPUBLISHED"));
   }
@@ -142,5 +149,29 @@ class CatalogControllerIntegrationTest {
 
     mvc.perform(get("/catalog/products/{productId}", UUID.randomUUID()))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void shouldRequireSellerRoleForCatalogManagement() throws Exception {
+    mvc.perform(
+            post("/catalog/categories")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Produce\"}"))
+        .andExpect(status().isUnauthorized());
+
+    mvc.perform(
+            post("/catalog/categories")
+                .with(customerJwt())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Produce\"}"))
+        .andExpect(status().isForbidden());
+  }
+
+  private static RequestPostProcessor sellerJwt() {
+    return jwt().authorities(new SimpleGrantedAuthority("ROLE_SELLER_OWNER"));
+  }
+
+  private static RequestPostProcessor customerJwt() {
+    return jwt().authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"));
   }
 }

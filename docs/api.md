@@ -215,12 +215,15 @@ The auth service includes `AuthExceptionHandler` for translating application exc
 
 Base URL in local Compose: `http://localhost:8087`
 
-These endpoints intentionally accept explicit user ids until service-to-service authorization is implemented.
+Seller business endpoints require `Authorization: Bearer <access-token>`.
+Store and membership management require a seller or admin role. Seller review endpoints require `ADMIN` or `SUPER_ADMIN`.
+Requests still carry explicit user ids; resource ownership checks against seller memberships are a future refinement.
 
 ### Create Seller
 
 ```http
 POST /sellers
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
 
@@ -241,6 +244,7 @@ Creates a seller store and an active `OWNER` membership for the owner user.
 
 ```http
 GET /sellers/{sellerId}
+Authorization: Bearer <access-token>
 ```
 
 Response: `200 OK`
@@ -252,6 +256,7 @@ review details when present.
 
 ```http
 POST /sellers/{sellerId}/approve
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
 
@@ -273,6 +278,7 @@ Marks the seller store as `APPROVED`. Seller-service also has a JSON Schema prod
 
 ```http
 POST /sellers/{sellerId}/reject
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
 
@@ -293,6 +299,7 @@ Marks the seller store as `REJECTED` with reviewer metadata.
 
 ```http
 POST /sellers/{sellerId}/members
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
 
@@ -313,6 +320,7 @@ Creates or reactivates a seller membership as `OWNER` or `STAFF`.
 
 ```http
 GET /sellers/{sellerId}/members
+Authorization: Bearer <access-token>
 ```
 
 Response: `200 OK`
@@ -323,6 +331,7 @@ Returns active and removed memberships for the seller.
 
 ```http
 DELETE /sellers/{sellerId}/members/{userId}
+Authorization: Bearer <access-token>
 ```
 
 Response: `204 No Content`
@@ -333,12 +342,14 @@ Marks the membership as `REMOVED`.
 
 Base URL in local Compose: `http://localhost:8082`
 
-These endpoints intentionally accept explicit seller ids until service-to-service authorization is implemented.
+Catalog browsing endpoints are public. Catalog management endpoints require `Authorization: Bearer <access-token>` with a seller or admin role.
+Requests still carry explicit seller ids; seller approval enforcement and ownership checks are future refinements.
 
 ### Create Category
 
 ```http
 POST /catalog/categories
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
 
@@ -378,6 +389,7 @@ Returns the category id, name, and timestamps.
 
 ```http
 PATCH /catalog/categories/{categoryId}
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
 
@@ -397,6 +409,7 @@ Renames the category.
 
 ```http
 POST /catalog/products
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
 
@@ -443,6 +456,7 @@ Returns products for the seller. The `status` query parameter is optional.
 
 ```http
 PATCH /catalog/products/{productId}
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
 
@@ -468,6 +482,7 @@ Updates product details while preserving the product's seller owner.
 
 ```http
 POST /catalog/products/{productId}/publish
+Authorization: Bearer <access-token>
 ```
 
 Response: `200 OK`
@@ -478,6 +493,7 @@ Changes the product status to `PUBLISHED`. Catalog-service also has a JSON Schem
 
 ```http
 POST /catalog/products/{productId}/unpublish
+Authorization: Bearer <access-token>
 ```
 
 Response: `200 OK`
@@ -488,13 +504,14 @@ Changes the product status to `UNPUBLISHED`.
 
 Base URL in local Compose: `http://localhost:8085`
 
-These endpoints intentionally accept explicit seller and product ids until service-to-service
-authorization and catalog lookups are implemented.
+Inventory APIs require `Authorization: Bearer <access-token>` with seller, admin, or service role.
+Requests still carry explicit seller and product ids; catalog lookups and ownership checks are future refinements.
 
 ### Upsert Stock
 
 ```http
 POST /inventory/stocks
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
 
@@ -518,6 +535,7 @@ Creates or replaces the stock quantity for a seller/product pair. Availability i
 
 ```http
 GET /inventory/stocks/{stockId}
+Authorization: Bearer <access-token>
 ```
 
 Response: `200 OK`
@@ -528,6 +546,7 @@ Returns on-hand, reserved, and available quantities for the stock record.
 
 ```http
 GET /inventory/stocks?sellerId={sellerId}
+Authorization: Bearer <access-token>
 ```
 
 Response: `200 OK`
@@ -538,6 +557,7 @@ Returns stock records owned by the seller.
 
 ```http
 POST /inventory/reservations
+Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
 
@@ -561,6 +581,7 @@ producer contract for `inventory.stock_reserved.v1`; runtime Kafka publishing is
 
 ```http
 POST /inventory/reservations/{reservationId}/release
+Authorization: Bearer <access-token>
 ```
 
 Response: `200 OK`

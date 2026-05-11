@@ -1,6 +1,7 @@
 package com.jobson.market.seller_service.web;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -18,8 +19,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -47,6 +50,7 @@ class SellerControllerIntegrationTest {
     MvcResult createResult =
         mvc.perform(
                 post("/sellers")
+                    .with(sellerJwt())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         """
@@ -62,12 +66,12 @@ class SellerControllerIntegrationTest {
     JsonNode created = objectMapper.readTree(createResult.getResponse().getContentAsString());
     String sellerId = created.path("id").stringValue();
 
-    mvc.perform(get("/sellers/{sellerId}", sellerId))
+    mvc.perform(get("/sellers/{sellerId}", sellerId).with(sellerJwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(sellerId))
         .andExpect(jsonPath("$.approvalStatus").value("PENDING_REVIEW"));
 
-    mvc.perform(get("/sellers/{sellerId}/members", sellerId))
+    mvc.perform(get("/sellers/{sellerId}/members", sellerId).with(sellerJwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(1)))
         .andExpect(jsonPath("$[0].userId").value(ownerUserId.toString()))
@@ -76,6 +80,7 @@ class SellerControllerIntegrationTest {
 
     mvc.perform(
             post("/sellers/{sellerId}/members", sellerId)
+                .with(sellerJwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
@@ -87,10 +92,11 @@ class SellerControllerIntegrationTest {
         .andExpect(jsonPath("$.role").value("STAFF"))
         .andExpect(jsonPath("$.status").value("ACTIVE"));
 
-    mvc.perform(delete("/sellers/{sellerId}/members/{userId}", sellerId, staffUserId))
+    mvc.perform(
+            delete("/sellers/{sellerId}/members/{userId}", sellerId, staffUserId).with(sellerJwt()))
         .andExpect(status().isNoContent());
 
-    mvc.perform(get("/sellers/{sellerId}/members", sellerId))
+    mvc.perform(get("/sellers/{sellerId}/members", sellerId).with(sellerJwt()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(2)))
         .andExpect(jsonPath("$[1].userId").value(staffUserId.toString()))
@@ -104,6 +110,7 @@ class SellerControllerIntegrationTest {
     MvcResult createResult =
         mvc.perform(
                 post("/sellers")
+                    .with(sellerJwt())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         """
@@ -120,6 +127,7 @@ class SellerControllerIntegrationTest {
 
     mvc.perform(
             post("/sellers/{sellerId}/approve", sellerId)
+                .with(adminJwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
@@ -133,6 +141,7 @@ class SellerControllerIntegrationTest {
 
     mvc.perform(
             post("/sellers/{sellerId}/reject", sellerId)
+                .with(adminJwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
@@ -147,6 +156,54 @@ class SellerControllerIntegrationTest {
 
   @Test
   void shouldReturnNotFoundForUnknownSeller() throws Exception {
-    mvc.perform(get("/sellers/{sellerId}", UUID.randomUUID())).andExpect(status().isNotFound());
+    mvc.perform(get("/sellers/{sellerId}", UUID.randomUUID()).with(sellerJwt()))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void shouldRequireJwtForSellerApis() throws Exception {
+    mvc.perform(get("/sellers/{sellerId}", UUID.randomUUID())).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void shouldRejectSellerReviewWithoutAdminRole() throws Exception {
+    UUID ownerUserId = UUID.randomUUID();
+    UUID reviewerUserId = UUID.randomUUID();
+    MvcResult createResult =
+        mvc.perform(
+                post("/sellers")
+                    .with(sellerJwt())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"name":"Fresh Market","ownerUserId":"%s"}
+                        """
+                            .formatted(ownerUserId)))
+            .andExpect(status().isCreated())
+            .andReturn();
+    String sellerId =
+        objectMapper
+            .readTree(createResult.getResponse().getContentAsString())
+            .path("id")
+            .stringValue();
+
+    mvc.perform(
+            post("/sellers/{sellerId}/approve", sellerId)
+                .with(sellerJwt())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"reviewerUserId":"%s","reviewNotes":"Ready"}
+                    """
+                        .formatted(reviewerUserId)))
+        .andExpect(status().isForbidden());
+  }
+
+  private static RequestPostProcessor sellerJwt() {
+    return jwt().authorities(new SimpleGrantedAuthority("ROLE_SELLER_OWNER"));
+  }
+
+  private static RequestPostProcessor adminJwt() {
+    return jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
   }
 }

@@ -88,6 +88,7 @@ The first implementation focus is the authentication foundation: users can regis
 | Platform | Publish service images on `main`. | Implemented through GitHub Actions. |
 | Platform | Deploy dev after successful image publishing. | Implemented through GitHub Actions. |
 | Platform | Deploy dev and prod with explicit image tags and smoke checks. | Implemented through GitHub Actions. |
+| Platform | Validate auth-service JWTs in downstream business services. | Implemented first in seller, catalog, and inventory services with role gates. |
 
 ## Non-Functional Requirements
 
@@ -296,7 +297,7 @@ The previous platform-hardening roadmap candidates now have initial implementati
    - Implemented: first inventory event contracts, `inventory.stock_reserved.v1` and `inventory.reservation_released.v1`.
    - Remaining: reservation commit/expiry and order-driven stock decrement behavior.
 
-Consumer-side event contracts, production observability, and inter-service authorization remain important platform-hardening tracks, but they are not prerequisites for the next domain slice.
+Consumer-side event contracts, production observability, and first-pass downstream JWT authorization now have initial implementation. Remaining hardening tracks include resource ownership checks, deeper consumer adoption, production incident routing, and distributed tracing.
 
 ### Marketplace Domain Workflows
 
