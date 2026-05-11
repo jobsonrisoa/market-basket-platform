@@ -14,7 +14,7 @@ spring:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
     open-in-view: false
-    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
 
   flyway:
     enabled: ${SPRING_FLYWAY_ENABLED:true}

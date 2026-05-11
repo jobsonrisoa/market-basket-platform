@@ -4,16 +4,40 @@ x-observability-env: &observability-env
   SENTRY_RELEASE: ${SENTRY_RELEASE:-market-basket-platform@local}
   SENTRY_TRACES_SAMPLE_RATE: ${SENTRY_TRACES_SAMPLE_RATE:-0.0}
 
+x-service-depends: &service-depends
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  kafka:
+    condition: service_healthy
+
+x-service-env: &service-env
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+  SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-market}
+  SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-market}
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+  SPRING_DATA_REDIS_HOST: redis
+  SPRING_DATA_REDIS_PORT: 6379
+
+x-resource-server-env: &resource-server-env
+  AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8000}
+  AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-market-basket-platform}
+  AUTH_JWT_JWK_SET_URI: ${AUTH_JWT_JWK_SET_URI:-http://auth-service:8080/.well-known/jwks.json}
+
+x-flyway-env: &flyway-env
+  FLYWAY_USER: ${POSTGRES_USER:-market}
+  FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
+  FLYWAY_LOCATIONS: filesystem:/flyway/sql
+  FLYWAY_BASELINE_ON_MIGRATE: "true"
+
 x-flyway-runner: &flyway-runner
   image: flyway/flyway:11.14.1-alpine
   depends_on:
     postgres:
       condition: service_healthy
   environment:
-    FLYWAY_USER: ${POSTGRES_USER:-market}
-    FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
-    FLYWAY_LOCATIONS: filesystem:/flyway/sql
-    FLYWAY_BASELINE_ON_MIGRATE: "true"
+    <<: *flyway-env
 
 services:
   postgres:
@@ -121,23 +145,11 @@ services:
     build:
       context: ./services/auth-service
     container_name: market-auth-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+    depends_on: *service-depends
     environment:
-      <<: *observability-env
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      <<: [*observability-env, *service-env]
       SERVER_PORT: 8080
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/market_auth
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-market}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8000}
       AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-market-basket-platform}
       AUTH_JWT_KEY_ID: ${AUTH_JWT_KEY_ID:-local-dev-key}
@@ -151,23 +163,11 @@ services:
     build:
       context: ./services/customer-service
     container_name: market-customer-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+    depends_on: *service-depends
     environment:
-      <<: *observability-env
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      <<: [*observability-env, *service-env]
       SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/market_customer
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-market}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
     ports:
       - "8081:8081"
 
@@ -176,26 +176,11 @@ services:
     build:
       context: ./services/seller-service
     container_name: market-seller-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+    depends_on: *service-depends
     environment:
-      <<: *observability-env
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      <<: [*observability-env, *service-env, *resource-server-env]
       SERVER_PORT: 8087
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/market_seller
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-market}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8000}
-      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-market-basket-platform}
-      AUTH_JWT_JWK_SET_URI: ${AUTH_JWT_JWK_SET_URI:-http://auth-service:8080/.well-known/jwks.json}
     ports:
       - "8087:8087"
 
@@ -204,26 +189,11 @@ services:
     build:
       context: ./services/catalog-service
     container_name: market-catalog-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+    depends_on: *service-depends
     environment:
-      <<: *observability-env
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      <<: [*observability-env, *service-env, *resource-server-env]
       SERVER_PORT: 8082
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/market_catalog
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-market}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8000}
-      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-market-basket-platform}
-      AUTH_JWT_JWK_SET_URI: ${AUTH_JWT_JWK_SET_URI:-http://auth-service:8080/.well-known/jwks.json}
     ports:
       - "8082:8082"
 
@@ -232,23 +202,11 @@ services:
     build:
       context: ./services/subscription-service
     container_name: market-subscription-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+    depends_on: *service-depends
     environment:
-      <<: *observability-env
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      <<: [*observability-env, *service-env]
       SERVER_PORT: 8083
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/market_subscription
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-market}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
     ports:
       - "8083:8083"
 
@@ -257,23 +215,11 @@ services:
     build:
       context: ./services/order-service
     container_name: market-order-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+    depends_on: *service-depends
     environment:
-      <<: *observability-env
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      <<: [*observability-env, *service-env]
       SERVER_PORT: 8084
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/market_order
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-market}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
     ports:
       - "8084:8084"
 
@@ -282,26 +228,11 @@ services:
     build:
       context: ./services/inventory-service
     container_name: market-inventory-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+    depends_on: *service-depends
     environment:
-      <<: *observability-env
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      <<: [*observability-env, *service-env, *resource-server-env]
       SERVER_PORT: 8085
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/market_inventory
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-market}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8000}
-      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-market-basket-platform}
-      AUTH_JWT_JWK_SET_URI: ${AUTH_JWT_JWK_SET_URI:-http://auth-service:8080/.well-known/jwks.json}
     ports:
       - "8085:8085"
 
@@ -310,33 +241,18 @@ services:
     build:
       context: ./services/notification-service
     container_name: market-notification-service
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+    depends_on: *service-depends
     environment:
-      <<: *observability-env
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      <<: [*observability-env, *service-env]
       SERVER_PORT: 8086
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/market_notification
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-market}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
     ports:
       - "8086:8086"
 
   migrate-auth-service:
     <<: *flyway-runner
     environment:
-      FLYWAY_USER: ${POSTGRES_USER:-market}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      FLYWAY_LOCATIONS: filesystem:/flyway/sql
-      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      <<: *flyway-env
       FLYWAY_URL: jdbc:postgresql://postgres:5432/market_auth
     volumes:
       - ./services/auth-service/src/main/resources/db/migration:/flyway/sql:ro
@@ -345,10 +261,7 @@ services:
   migrate-customer-service:
     <<: *flyway-runner
     environment:
-      FLYWAY_USER: ${POSTGRES_USER:-market}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      FLYWAY_LOCATIONS: filesystem:/flyway/sql
-      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      <<: *flyway-env
       FLYWAY_URL: jdbc:postgresql://postgres:5432/market_customer
     volumes:
       - ./services/customer-service/src/main/resources/db/migration:/flyway/sql:ro
@@ -357,10 +270,7 @@ services:
   migrate-seller-service:
     <<: *flyway-runner
     environment:
-      FLYWAY_USER: ${POSTGRES_USER:-market}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      FLYWAY_LOCATIONS: filesystem:/flyway/sql
-      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      <<: *flyway-env
       FLYWAY_URL: jdbc:postgresql://postgres:5432/market_seller
     volumes:
       - ./services/seller-service/src/main/resources/db/migration:/flyway/sql:ro
@@ -369,10 +279,7 @@ services:
   migrate-catalog-service:
     <<: *flyway-runner
     environment:
-      FLYWAY_USER: ${POSTGRES_USER:-market}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      FLYWAY_LOCATIONS: filesystem:/flyway/sql
-      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      <<: *flyway-env
       FLYWAY_URL: jdbc:postgresql://postgres:5432/market_catalog
     volumes:
       - ./services/catalog-service/src/main/resources/db/migration:/flyway/sql:ro
@@ -381,10 +288,7 @@ services:
   migrate-subscription-service:
     <<: *flyway-runner
     environment:
-      FLYWAY_USER: ${POSTGRES_USER:-market}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      FLYWAY_LOCATIONS: filesystem:/flyway/sql
-      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      <<: *flyway-env
       FLYWAY_URL: jdbc:postgresql://postgres:5432/market_subscription
     volumes:
       - ./services/subscription-service/src/main/resources/db/migration:/flyway/sql:ro
@@ -393,10 +297,7 @@ services:
   migrate-order-service:
     <<: *flyway-runner
     environment:
-      FLYWAY_USER: ${POSTGRES_USER:-market}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      FLYWAY_LOCATIONS: filesystem:/flyway/sql
-      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      <<: *flyway-env
       FLYWAY_URL: jdbc:postgresql://postgres:5432/market_order
     volumes:
       - ./services/order-service/src/main/resources/db/migration:/flyway/sql:ro
@@ -405,10 +306,7 @@ services:
   migrate-inventory-service:
     <<: *flyway-runner
     environment:
-      FLYWAY_USER: ${POSTGRES_USER:-market}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      FLYWAY_LOCATIONS: filesystem:/flyway/sql
-      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      <<: *flyway-env
       FLYWAY_URL: jdbc:postgresql://postgres:5432/market_inventory
     volumes:
       - ./services/inventory-service/src/main/resources/db/migration:/flyway/sql:ro
@@ -417,10 +315,7 @@ services:
   migrate-notification-service:
     <<: *flyway-runner
     environment:
-      FLYWAY_USER: ${POSTGRES_USER:-market}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-market}
-      FLYWAY_LOCATIONS: filesystem:/flyway/sql
-      FLYWAY_BASELINE_ON_MIGRATE: "true"
+      <<: *flyway-env
       FLYWAY_URL: jdbc:postgresql://postgres:5432/market_notification
     volumes:
       - ./services/notification-service/src/main/resources/db/migration:/flyway/sql:ro
