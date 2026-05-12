@@ -53,6 +53,11 @@ public class InventoryService {
     return stocks.findBySellerIdOrderByCreatedAtAsc(sellerId);
   }
 
+  @Transactional(readOnly = true)
+  public InventoryReservationEntity getReservation(UUID reservationId) {
+    return requireReservation(reservationId);
+  }
+
   @Transactional
   public InventoryReservationEntity reserve(
       UUID stockId, BigDecimal quantity, String requestedBy, String referenceId) {
@@ -66,11 +71,7 @@ public class InventoryService {
 
   @Transactional
   public InventoryReservationEntity release(UUID reservationId) {
-    InventoryReservationEntity reservation =
-        reservations
-            .findById(reservationId)
-            .orElseThrow(
-                () -> new InventoryNotFoundException("Inventory reservation", reservationId));
+    InventoryReservationEntity reservation = requireReservation(reservationId);
     if (reservation.status() == InventoryReservationStatus.ACTIVE) {
       InventoryStockEntity stock = requireStock(reservation.stockId());
       reservation.release(clock.instant());
@@ -85,5 +86,11 @@ public class InventoryService {
     return stocks
         .findById(stockId)
         .orElseThrow(() -> new InventoryNotFoundException("Inventory stock", stockId));
+  }
+
+  private InventoryReservationEntity requireReservation(UUID reservationId) {
+    return reservations
+        .findById(reservationId)
+        .orElseThrow(() -> new InventoryNotFoundException("Inventory reservation", reservationId));
   }
 }

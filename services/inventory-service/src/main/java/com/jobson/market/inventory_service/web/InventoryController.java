@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,7 +35,8 @@ class InventoryController {
 
   @PostMapping("/stocks")
   ResponseEntity<InventoryStockResponse> upsertStock(
-      @Valid @RequestBody UpsertStockRequest request) {
+      @Valid @RequestBody UpsertStockRequest request, Authentication authentication) {
+    AuthenticatedSellerAccess.requireSellerAccess(authentication, request.sellerId());
     InventoryStockEntity stock =
         inventory.upsertStock(
             request.sellerId(), request.productId(), request.onHandQuantity(), request.unit());
@@ -42,18 +44,24 @@ class InventoryController {
   }
 
   @GetMapping("/stocks/{stockId}")
-  InventoryStockResponse getStock(@PathVariable UUID stockId) {
-    return InventoryStockResponse.from(inventory.getStock(stockId));
+  InventoryStockResponse getStock(@PathVariable UUID stockId, Authentication authentication) {
+    InventoryStockEntity stock = inventory.getStock(stockId);
+    AuthenticatedSellerAccess.requireSellerAccess(authentication, stock.sellerId());
+    return InventoryStockResponse.from(stock);
   }
 
   @GetMapping("/stocks")
-  List<InventoryStockResponse> listStocks(@RequestParam UUID sellerId) {
+  List<InventoryStockResponse> listStocks(
+      @RequestParam UUID sellerId, Authentication authentication) {
+    AuthenticatedSellerAccess.requireSellerAccess(authentication, sellerId);
     return inventory.listStocks(sellerId).stream().map(InventoryStockResponse::from).toList();
   }
 
   @PostMapping("/reservations")
   ResponseEntity<InventoryReservationResponse> reserve(
-      @Valid @RequestBody CreateReservationRequest request) {
+      @Valid @RequestBody CreateReservationRequest request, Authentication authentication) {
+    InventoryStockEntity stock = inventory.getStock(request.stockId());
+    AuthenticatedSellerAccess.requireSellerAccess(authentication, stock.sellerId());
     InventoryReservationEntity reservation =
         inventory.reserve(
             request.stockId(), request.quantity(), request.requestedBy(), request.referenceId());
@@ -62,7 +70,10 @@ class InventoryController {
   }
 
   @PostMapping("/reservations/{reservationId}/release")
-  InventoryReservationResponse release(@PathVariable UUID reservationId) {
+  InventoryReservationResponse release(
+      @PathVariable UUID reservationId, Authentication authentication) {
+    InventoryReservationEntity reservation = inventory.getReservation(reservationId);
+    AuthenticatedSellerAccess.requireSellerAccess(authentication, reservation.sellerId());
     return InventoryReservationResponse.from(inventory.release(reservationId));
   }
 

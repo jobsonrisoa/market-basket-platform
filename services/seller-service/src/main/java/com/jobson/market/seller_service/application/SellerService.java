@@ -2,12 +2,14 @@ package com.jobson.market.seller_service.application;
 
 import com.jobson.market.seller_service.domain.SellerMembershipEntity;
 import com.jobson.market.seller_service.domain.SellerMembershipRole;
+import com.jobson.market.seller_service.domain.SellerMembershipStatus;
 import com.jobson.market.seller_service.domain.SellerStoreEntity;
 import com.jobson.market.seller_service.persistence.SellerMembershipRepository;
 import com.jobson.market.seller_service.persistence.SellerStoreRepository;
 import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,13 +38,21 @@ public class SellerService {
   }
 
   @Transactional(readOnly = true)
-  public SellerStoreEntity getStore(UUID sellerId) {
-    return requireStore(sellerId);
+  public SellerStoreEntity getStore(UUID sellerId, UUID actorUserId, boolean platformAdmin) {
+    SellerStoreEntity store = requireStore(sellerId);
+    requireActiveMemberOrAdmin(sellerId, actorUserId, platformAdmin);
+    return store;
   }
 
   @Transactional
-  public SellerMembershipEntity addMember(UUID sellerId, UUID userId, SellerMembershipRole role) {
+  public SellerMembershipEntity addMember(
+      UUID sellerId,
+      UUID actorUserId,
+      boolean platformAdmin,
+      UUID userId,
+      SellerMembershipRole role) {
     requireStore(sellerId);
+    requireOwnerOrAdmin(sellerId, actorUserId, platformAdmin);
     return memberships
         .findBySellerIdAndUserId(sellerId, userId)
         .map(
@@ -57,14 +67,17 @@ public class SellerService {
   }
 
   @Transactional(readOnly = true)
-  public List<SellerMembershipEntity> listMembers(UUID sellerId) {
+  public List<SellerMembershipEntity> listMembers(
+      UUID sellerId, UUID actorUserId, boolean platformAdmin) {
     requireStore(sellerId);
+    requireOwnerOrAdmin(sellerId, actorUserId, platformAdmin);
     return memberships.findBySellerIdOrderByCreatedAtAsc(sellerId);
   }
 
   @Transactional
-  public void removeMember(UUID sellerId, UUID userId) {
+  public void removeMember(UUID sellerId, UUID actorUserId, boolean platformAdmin, UUID userId) {
     requireStore(sellerId);
+    requireOwnerOrAdmin(sellerId, actorUserId, platformAdmin);
     memberships
         .findBySellerIdAndUserId(sellerId, userId)
         .ifPresent(
@@ -90,5 +103,26 @@ public class SellerService {
 
   private SellerStoreEntity requireStore(UUID sellerId) {
     return stores.findById(sellerId).orElseThrow(() -> new SellerNotFoundException(sellerId));
+  }
+
+  private void requireActiveMemberOrAdmin(UUID sellerId, UUID actorUserId, boolean platformAdmin) {
+    if (platformAdmin) {
+      return;
+    }
+    memberships
+        .findBySellerIdAndUserId(sellerId, actorUserId)
+        .filter(membership -> membership.status() == SellerMembershipStatus.ACTIVE)
+        .orElseThrow(() -> new AccessDeniedException("Active seller membership required"));
+  }
+
+  private void requireOwnerOrAdmin(UUID sellerId, UUID actorUserId, boolean platformAdmin) {
+    if (platformAdmin) {
+      return;
+    }
+    memberships
+        .findBySellerIdAndUserId(sellerId, actorUserId)
+        .filter(membership -> membership.status() == SellerMembershipStatus.ACTIVE)
+        .filter(membership -> membership.role() == SellerMembershipRole.OWNER)
+        .orElseThrow(() -> new AccessDeniedException("Active seller owner membership required"));
   }
 }

@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jobson.market.catalog_service.TestcontainersConfiguration;
 import com.jobson.market.catalog_service.persistence.CategoryRepository;
 import com.jobson.market.catalog_service.persistence.ProductRepository;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,7 +77,7 @@ class CatalogControllerIntegrationTest {
     MvcResult productResult =
         mvc.perform(
                 post("/catalog/products")
-                    .with(sellerJwt())
+                    .with(sellerJwtFor(sellerId, "ACTIVE"))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         """
@@ -114,7 +116,7 @@ class CatalogControllerIntegrationTest {
 
     mvc.perform(
             patch("/catalog/products/{productId}", productId)
-                .with(sellerJwt())
+                .with(sellerJwtFor(sellerId, "ACTIVE"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
@@ -133,11 +135,15 @@ class CatalogControllerIntegrationTest {
         .andExpect(jsonPath("$.name").value("Rainbow Carrots"))
         .andExpect(jsonPath("$.currency").value("BRL"));
 
-    mvc.perform(post("/catalog/products/{productId}/publish", productId).with(sellerJwt()))
+    mvc.perform(
+            post("/catalog/products/{productId}/publish", productId)
+                .with(sellerJwtFor(sellerId, "ACTIVE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("PUBLISHED"));
 
-    mvc.perform(post("/catalog/products/{productId}/unpublish", productId).with(sellerJwt()))
+    mvc.perform(
+            post("/catalog/products/{productId}/unpublish", productId)
+                .with(sellerJwtFor(sellerId, "ACTIVE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("UNPUBLISHED"));
   }
@@ -167,11 +173,116 @@ class CatalogControllerIntegrationTest {
         .andExpect(status().isForbidden());
   }
 
+  @Test
+  void shouldAuthorizeCatalogWritesByActiveSellerMembership() throws Exception {
+    UUID sellerId = UUID.randomUUID();
+    UUID otherSellerId = UUID.randomUUID();
+
+    String categoryId = createCategory();
+    String productId =
+        createProduct(categoryId, sellerId, sellerJwtFor(sellerId, "ACTIVE"))
+            .path("id")
+            .stringValue();
+
+    mvc.perform(
+            post("/catalog/products")
+                .with(sellerJwtFor(otherSellerId, "ACTIVE"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(productJson(sellerId, categoryId, "Cross Seller Carrots")))
+        .andExpect(status().isForbidden());
+
+    mvc.perform(
+            patch("/catalog/products/{productId}", productId)
+                .with(sellerJwtFor(sellerId, "REMOVED"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updateProductJson(categoryId)))
+        .andExpect(status().isForbidden());
+
+    mvc.perform(post("/catalog/products/{productId}/publish", productId).with(adminJwt()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("PUBLISHED"));
+  }
+
   private static RequestPostProcessor sellerJwt() {
     return jwt().authorities(new SimpleGrantedAuthority("ROLE_SELLER_OWNER"));
   }
 
   private static RequestPostProcessor customerJwt() {
     return jwt().authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"));
+  }
+
+  private static RequestPostProcessor adminJwt() {
+    return jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+  }
+
+  private static RequestPostProcessor sellerJwtFor(UUID sellerId, String status) {
+    return jwt()
+        .jwt(
+            token ->
+                token.claim(
+                    "seller_memberships",
+                    List.of(
+                        Map.of(
+                            "sellerId", sellerId.toString(), "role", "OWNER", "status", status))))
+        .authorities(new SimpleGrantedAuthority("ROLE_SELLER_OWNER"));
+  }
+
+  private String createCategory() throws Exception {
+    MvcResult result =
+        mvc.perform(
+                post("/catalog/categories")
+                    .with(sellerJwt())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"name\":\"Produce\"}"))
+            .andExpect(status().isCreated())
+            .andReturn();
+    return objectMapper
+        .readTree(result.getResponse().getContentAsString())
+        .path("id")
+        .stringValue();
+  }
+
+  private JsonNode createProduct(String categoryId, UUID sellerId, RequestPostProcessor jwt)
+      throws Exception {
+    MvcResult result =
+        mvc.perform(
+                post("/catalog/products")
+                    .with(jwt)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(productJson(sellerId, categoryId, "Organic Carrots")))
+            .andExpect(status().isCreated())
+            .andReturn();
+    return objectMapper.readTree(result.getResponse().getContentAsString());
+  }
+
+  private static String productJson(UUID sellerId, String categoryId, String name) {
+    return """
+        {
+          "sellerId":"%s",
+          "categoryId":"%s",
+          "name":"%s",
+          "description":"Fresh carrots",
+          "unit":"kg",
+          "packageSize":"1 kg bag",
+          "priceAmount":7.50,
+          "currency":"USD"
+        }
+        """
+        .formatted(sellerId, categoryId, name);
+  }
+
+  private static String updateProductJson(String categoryId) {
+    return """
+        {
+          "categoryId":"%s",
+          "name":"Rainbow Carrots",
+          "description":"Colorful carrots",
+          "unit":"bundle",
+          "packageSize":"6 count",
+          "priceAmount":9.25,
+          "currency":"BRL"
+        }
+        """
+        .formatted(categoryId);
   }
 }

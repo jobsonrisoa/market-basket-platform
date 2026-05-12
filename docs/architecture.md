@@ -84,7 +84,7 @@ Persistence entities include:
 - Refresh-token reuse revokes the whole token family.
 - JWKS is exposed from `/.well-known/jwks.json` so downstream services can validate JWTs without calling the auth service for every request.
 - Kong currently routes `/auth/**` and `/.well-known/jwks.json` to auth-service. The Spring OAuth2 entry points exist on auth-service and still need Kong routes before gateway-only OAuth login is expected to work.
-- Seller-service, catalog-service, and inventory-service validate auth-service JWTs through JWKS, issuer, and audience checks, then map `roles` to `ROLE_*` authorities and `permissions` to direct authorities. Public catalog reads remain open. Resource ownership checks that combine JWT roles with seller memberships remain a later authorization refinement.
+- Seller-service, catalog-service, and inventory-service validate auth-service JWTs through JWKS, issuer, and audience checks, then map `roles` to `ROLE_*` authorities and `permissions` to direct authorities. Public catalog reads remain open. Seller-service enforces ownership against its membership table. Catalog and inventory write paths require platform/service roles or active `seller_memberships` JWT claims for the target seller.
 
 ## Eventing
 

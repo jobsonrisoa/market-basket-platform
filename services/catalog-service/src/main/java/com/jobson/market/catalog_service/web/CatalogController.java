@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -58,7 +59,9 @@ class CatalogController {
   }
 
   @PostMapping("/products")
-  ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody CreateProductRequest request) {
+  ResponseEntity<ProductResponse> createProduct(
+      @Valid @RequestBody CreateProductRequest request, Authentication authentication) {
+    AuthenticatedSellerAccess.requireSellerAccess(authentication, request.sellerId());
     ProductEntity product = catalog.createProduct(request.sellerId(), request.details());
     return ResponseEntity.status(HttpStatus.CREATED).body(ProductResponse.from(product));
   }
@@ -76,17 +79,25 @@ class CatalogController {
 
   @PatchMapping("/products/{productId}")
   ProductResponse updateProduct(
-      @PathVariable UUID productId, @Valid @RequestBody UpdateProductRequest request) {
+      @PathVariable UUID productId,
+      @Valid @RequestBody UpdateProductRequest request,
+      Authentication authentication) {
+    ProductEntity product = catalog.getProduct(productId);
+    AuthenticatedSellerAccess.requireSellerAccess(authentication, product.sellerId());
     return ProductResponse.from(catalog.updateProduct(productId, request.details()));
   }
 
   @PostMapping("/products/{productId}/publish")
-  ProductResponse publishProduct(@PathVariable UUID productId) {
+  ProductResponse publishProduct(@PathVariable UUID productId, Authentication authentication) {
+    ProductEntity product = catalog.getProduct(productId);
+    AuthenticatedSellerAccess.requireSellerAccess(authentication, product.sellerId());
     return ProductResponse.from(catalog.publishProduct(productId));
   }
 
   @PostMapping("/products/{productId}/unpublish")
-  ProductResponse unpublishProduct(@PathVariable UUID productId) {
+  ProductResponse unpublishProduct(@PathVariable UUID productId, Authentication authentication) {
+    ProductEntity product = catalog.getProduct(productId);
+    AuthenticatedSellerAccess.requireSellerAccess(authentication, product.sellerId());
     return ProductResponse.from(catalog.unpublishProduct(productId));
   }
 

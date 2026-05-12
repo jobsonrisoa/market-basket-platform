@@ -50,13 +50,13 @@ class SellerControllerIntegrationTest {
     MvcResult createResult =
         mvc.perform(
                 post("/sellers")
-                    .with(sellerJwt())
+                    .with(sellerJwt(ownerUserId))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         """
                         {"name":"Fresh Market","ownerUserId":"%s"}
                         """
-                            .formatted(ownerUserId)))
+                            .formatted(UUID.randomUUID())))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.name").value("Fresh Market"))
             .andExpect(jsonPath("$.ownerUserId").value(ownerUserId.toString()))
@@ -66,12 +66,12 @@ class SellerControllerIntegrationTest {
     JsonNode created = objectMapper.readTree(createResult.getResponse().getContentAsString());
     String sellerId = created.path("id").stringValue();
 
-    mvc.perform(get("/sellers/{sellerId}", sellerId).with(sellerJwt()))
+    mvc.perform(get("/sellers/{sellerId}", sellerId).with(sellerJwt(ownerUserId)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(sellerId))
         .andExpect(jsonPath("$.approvalStatus").value("PENDING_REVIEW"));
 
-    mvc.perform(get("/sellers/{sellerId}/members", sellerId).with(sellerJwt()))
+    mvc.perform(get("/sellers/{sellerId}/members", sellerId).with(sellerJwt(ownerUserId)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(1)))
         .andExpect(jsonPath("$[0].userId").value(ownerUserId.toString()))
@@ -80,7 +80,7 @@ class SellerControllerIntegrationTest {
 
     mvc.perform(
             post("/sellers/{sellerId}/members", sellerId)
-                .with(sellerJwt())
+                .with(sellerJwt(ownerUserId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
@@ -93,10 +93,11 @@ class SellerControllerIntegrationTest {
         .andExpect(jsonPath("$.status").value("ACTIVE"));
 
     mvc.perform(
-            delete("/sellers/{sellerId}/members/{userId}", sellerId, staffUserId).with(sellerJwt()))
+            delete("/sellers/{sellerId}/members/{userId}", sellerId, staffUserId)
+                .with(sellerJwt(ownerUserId)))
         .andExpect(status().isNoContent());
 
-    mvc.perform(get("/sellers/{sellerId}/members", sellerId).with(sellerJwt()))
+    mvc.perform(get("/sellers/{sellerId}/members", sellerId).with(sellerJwt(ownerUserId)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(2)))
         .andExpect(jsonPath("$[1].userId").value(staffUserId.toString()))
@@ -110,7 +111,7 @@ class SellerControllerIntegrationTest {
     MvcResult createResult =
         mvc.perform(
                 post("/sellers")
-                    .with(sellerJwt())
+                    .with(sellerJwt(ownerUserId))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         """
@@ -127,13 +128,13 @@ class SellerControllerIntegrationTest {
 
     mvc.perform(
             post("/sellers/{sellerId}/approve", sellerId)
-                .with(adminJwt())
+                .with(adminJwt(reviewerUserId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
                     {"reviewerUserId":"%s","reviewNotes":"Ready for marketplace"}
                     """
-                        .formatted(reviewerUserId)))
+                        .formatted(UUID.randomUUID())))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.approvalStatus").value("APPROVED"))
         .andExpect(jsonPath("$.reviewedByUserId").value(reviewerUserId.toString()))
@@ -141,13 +142,13 @@ class SellerControllerIntegrationTest {
 
     mvc.perform(
             post("/sellers/{sellerId}/reject", sellerId)
-                .with(adminJwt())
+                .with(adminJwt(reviewerUserId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
                     {"reviewerUserId":"%s","reviewNotes":"Missing license"}
                     """
-                        .formatted(reviewerUserId)))
+                        .formatted(UUID.randomUUID())))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.approvalStatus").value("REJECTED"))
         .andExpect(jsonPath("$.reviewedByUserId").value(reviewerUserId.toString()))
@@ -156,7 +157,7 @@ class SellerControllerIntegrationTest {
 
   @Test
   void shouldReturnNotFoundForUnknownSeller() throws Exception {
-    mvc.perform(get("/sellers/{sellerId}", UUID.randomUUID()).with(sellerJwt()))
+    mvc.perform(get("/sellers/{sellerId}", UUID.randomUUID()).with(sellerJwt(UUID.randomUUID())))
         .andExpect(status().isNotFound());
   }
 
@@ -172,7 +173,7 @@ class SellerControllerIntegrationTest {
     MvcResult createResult =
         mvc.perform(
                 post("/sellers")
-                    .with(sellerJwt())
+                    .with(sellerJwt(ownerUserId))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         """
@@ -189,7 +190,7 @@ class SellerControllerIntegrationTest {
 
     mvc.perform(
             post("/sellers/{sellerId}/approve", sellerId)
-                .with(sellerJwt())
+                .with(sellerJwt(ownerUserId))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     """
@@ -199,11 +200,64 @@ class SellerControllerIntegrationTest {
         .andExpect(status().isForbidden());
   }
 
-  private static RequestPostProcessor sellerJwt() {
-    return jwt().authorities(new SimpleGrantedAuthority("ROLE_SELLER_OWNER"));
+  @Test
+  void shouldDenyCrossSellerAndRemovedMemberAccess() throws Exception {
+    UUID ownerUserId = UUID.randomUUID();
+    UUID otherUserId = UUID.randomUUID();
+    UUID staffUserId = UUID.randomUUID();
+
+    MvcResult createResult =
+        mvc.perform(
+                post("/sellers")
+                    .with(sellerJwt(ownerUserId))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"name\":\"Fresh Market\"}"))
+            .andExpect(status().isCreated())
+            .andReturn();
+    String sellerId =
+        objectMapper
+            .readTree(createResult.getResponse().getContentAsString())
+            .path("id")
+            .stringValue();
+
+    mvc.perform(get("/sellers/{sellerId}/members", sellerId).with(sellerJwt(otherUserId)))
+        .andExpect(status().isForbidden());
+
+    mvc.perform(
+            post("/sellers/{sellerId}/members", sellerId)
+                .with(sellerJwt(ownerUserId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"userId":"%s","role":"STAFF"}
+                    """
+                        .formatted(staffUserId)))
+        .andExpect(status().isCreated());
+
+    mvc.perform(
+            delete("/sellers/{sellerId}/members/{userId}", sellerId, staffUserId)
+                .with(sellerJwt(ownerUserId)))
+        .andExpect(status().isNoContent());
+
+    mvc.perform(get("/sellers/{sellerId}", sellerId).with(staffJwt(staffUserId)))
+        .andExpect(status().isForbidden());
   }
 
-  private static RequestPostProcessor adminJwt() {
-    return jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+  private static RequestPostProcessor sellerJwt(UUID subject) {
+    return jwt()
+        .jwt(token -> token.subject(subject.toString()))
+        .authorities(new SimpleGrantedAuthority("ROLE_SELLER_OWNER"));
+  }
+
+  private static RequestPostProcessor staffJwt(UUID subject) {
+    return jwt()
+        .jwt(token -> token.subject(subject.toString()))
+        .authorities(new SimpleGrantedAuthority("ROLE_SELLER_STAFF"));
+  }
+
+  private static RequestPostProcessor adminJwt(UUID subject) {
+    return jwt()
+        .jwt(token -> token.subject(subject.toString()))
+        .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
   }
 }

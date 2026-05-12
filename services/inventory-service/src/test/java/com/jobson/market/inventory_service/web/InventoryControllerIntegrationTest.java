@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jobson.market.inventory_service.TestcontainersConfiguration;
 import com.jobson.market.inventory_service.persistence.InventoryReservationRepository;
 import com.jobson.market.inventory_service.persistence.InventoryStockRepository;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,7 +51,7 @@ class InventoryControllerIntegrationTest {
     MvcResult stockResult =
         mvc.perform(
                 post("/inventory/stocks")
-                    .with(sellerJwt())
+                    .with(sellerJwtFor(sellerId, "ACTIVE"))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         """
@@ -70,11 +72,14 @@ class InventoryControllerIntegrationTest {
     JsonNode stock = objectMapper.readTree(stockResult.getResponse().getContentAsString());
     String stockId = stock.path("id").stringValue();
 
-    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwt()))
+    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwtFor(sellerId, "ACTIVE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(stockId));
 
-    mvc.perform(get("/inventory/stocks").param("sellerId", sellerId.toString()).with(sellerJwt()))
+    mvc.perform(
+            get("/inventory/stocks")
+                .param("sellerId", sellerId.toString())
+                .with(sellerJwtFor(sellerId, "ACTIVE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(1)))
         .andExpect(jsonPath("$[0].id").value(stockId));
@@ -103,7 +108,7 @@ class InventoryControllerIntegrationTest {
         objectMapper.readTree(reservationResult.getResponse().getContentAsString());
     String reservationId = reservation.path("id").stringValue();
 
-    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwt()))
+    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwtFor(sellerId, "ACTIVE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.reservedQuantity").value(4.5))
         .andExpect(jsonPath("$.availableQuantity").value(21.0));
@@ -114,7 +119,7 @@ class InventoryControllerIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("RELEASED"));
 
-    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwt()))
+    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwtFor(sellerId, "ACTIVE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.reservedQuantity").value(0))
         .andExpect(jsonPath("$.availableQuantity").value(25.5));
@@ -135,6 +140,30 @@ class InventoryControllerIntegrationTest {
         .andExpect(status().isForbidden());
   }
 
+  @Test
+  void shouldAuthorizeInventoryWritesByActiveSellerMembership() throws Exception {
+    UUID sellerId = UUID.randomUUID();
+    UUID otherSellerId = UUID.randomUUID();
+    UUID productId = UUID.randomUUID();
+
+    String stockId =
+        upsertStock(sellerId, productId, sellerJwtFor(sellerId, "ACTIVE")).path("id").stringValue();
+
+    mvc.perform(
+            post("/inventory/stocks")
+                .with(sellerJwtFor(otherSellerId, "ACTIVE"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(stockJson(sellerId, UUID.randomUUID())))
+        .andExpect(status().isForbidden());
+
+    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwtFor(sellerId, "REMOVED")))
+        .andExpect(status().isForbidden());
+
+    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(adminJwt()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(stockId));
+  }
+
   private static RequestPostProcessor sellerJwt() {
     return jwt().authorities(new SimpleGrantedAuthority("ROLE_SELLER_OWNER"));
   }
@@ -145,5 +174,46 @@ class InventoryControllerIntegrationTest {
 
   private static RequestPostProcessor customerJwt() {
     return jwt().authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"));
+  }
+
+  private static RequestPostProcessor adminJwt() {
+    return jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+  }
+
+  private static RequestPostProcessor sellerJwtFor(UUID sellerId, String status) {
+    return jwt()
+        .jwt(
+            token ->
+                token.claim(
+                    "seller_memberships",
+                    List.of(
+                        Map.of(
+                            "sellerId", sellerId.toString(), "role", "OWNER", "status", status))))
+        .authorities(new SimpleGrantedAuthority("ROLE_SELLER_OWNER"));
+  }
+
+  private JsonNode upsertStock(UUID sellerId, UUID productId, RequestPostProcessor jwt)
+      throws Exception {
+    MvcResult result =
+        mvc.perform(
+                post("/inventory/stocks")
+                    .with(jwt)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(stockJson(sellerId, productId)))
+            .andExpect(status().isCreated())
+            .andReturn();
+    return objectMapper.readTree(result.getResponse().getContentAsString());
+  }
+
+  private static String stockJson(UUID sellerId, UUID productId) {
+    return """
+        {
+          "sellerId":"%s",
+          "productId":"%s",
+          "onHandQuantity":25.5,
+          "unit":"kg"
+        }
+        """
+        .formatted(sellerId, productId);
   }
 }

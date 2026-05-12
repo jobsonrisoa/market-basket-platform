@@ -56,7 +56,7 @@ The implemented foundation now covers authentication plus the first seller, cata
 
 - Customer profile management.
 - Product catalog search and read-model optimization.
-- Seller approval enforcement during catalog publishing and ownership checks against seller memberships.
+- Seller approval enforcement during catalog publishing.
 - Subscription plan and renewal workflows.
 - Basket, checkout, and order lifecycle.
 - Inventory reservation expiry, commit, decrement, and adjustment workflows.
@@ -196,7 +196,7 @@ RBAC implementation status and remaining plan:
 3. Added permissions such as `SELLER_CATALOG_MANAGE`, `SELLER_INVENTORY_MANAGE`, `SELLER_ORDER_FULFILL`, `CUSTOMER_SUBSCRIPTION_MANAGE_OWN`, `PLATFORM_SELLER_REVIEW`, `AUTH_USER_ROLE_ASSIGN`, and `AUTH_USER_ROLE_REVOKE`.
 4. Added role-change outbox events with actor, target user, and changed role.
 5. Added seller membership records outside auth in `seller-service`.
-6. Remaining: combine JWT permissions with resource ownership checks, for example "user has `SELLER_STAFF` and belongs to seller store X."
+6. Seller, catalog, and inventory writes now combine JWT roles with seller ownership checks. Seller-service checks its membership table; catalog and inventory require active `seller_memberships` JWT claims for seller-scoped writes.
 7. Keep first-admin bootstrap operational and auditable; only `SUPER_ADMIN` should grant `ADMIN` or `SUPER_ADMIN` after bootstrap.
 
 ### Kafka Event Contracts and Testing
@@ -307,7 +307,7 @@ The previous platform-hardening roadmap candidates now have initial implementati
    - Implemented: first inventory event contracts, `inventory.stock_reserved.v1` and `inventory.reservation_released.v1`.
    - Remaining: reservation commit/expiry and order-driven stock decrement behavior.
 
-Consumer-side event contracts, local observability, and first-pass downstream JWT authorization now have initial implementation. Remaining hardening tracks include resource ownership checks, deeper consumer adoption, production incident routing, rate limiting, and distributed tracing.
+Consumer-side event contracts, local observability, and downstream JWT plus ownership authorization now have initial implementation. Remaining hardening tracks include deeper consumer adoption, production incident routing, rate limiting, and distributed tracing.
 
 ### Marketplace Domain Workflows
 

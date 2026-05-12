@@ -225,8 +225,13 @@ The auth service includes `AuthExceptionHandler` for translating application exc
 Base URL in local Compose: `http://localhost:8087`
 
 Seller business endpoints require `Authorization: Bearer <access-token>`.
-Store and membership management require a seller or admin role. Seller review endpoints require `ADMIN` or `SUPER_ADMIN`.
-Requests still carry explicit user ids; resource ownership checks against seller memberships are a future refinement.
+Store reads require an active seller membership or platform admin role. Membership management requires
+an active seller `OWNER` membership or platform admin role. Seller review endpoints require `ADMIN`
+or `SUPER_ADMIN`.
+
+Protected seller operations use the JWT subject as the actor user id. Request-body actor ids such as
+`ownerUserId` and `reviewerUserId` are ignored when present and are retained only for temporary
+backward compatibility.
 
 ### Create Seller
 
@@ -248,6 +253,7 @@ Request:
 Response: `201 Created`
 
 Creates a seller store and an active `OWNER` membership for the owner user.
+The owner user is the authenticated JWT subject, not the request-body `ownerUserId`.
 
 ### Get Seller
 
@@ -282,6 +288,7 @@ Response: `200 OK`
 
 Marks the seller store as `APPROVED`. Seller-service also has a JSON Schema producer contract for
 `seller.approved.v1`; runtime Kafka publishing is deferred.
+The reviewer user is the authenticated JWT subject, not the request-body `reviewerUserId`.
 
 ### Reject Seller
 
@@ -352,7 +359,18 @@ Marks the membership as `REMOVED`.
 Base URL in local Compose: `http://localhost:8082`
 
 Catalog browsing endpoints are public. Catalog management endpoints require `Authorization: Bearer <access-token>` with a seller or admin role.
-Requests still carry explicit seller ids; seller approval enforcement and ownership checks are future refinements.
+Product write endpoints also require platform admin role or an active seller membership claim for
+the target seller. Seller approval enforcement remains future scope.
+
+Seller membership claims are expected in JWTs for seller-scoped catalog writes:
+
+```json
+{
+  "seller_memberships": [
+    {"sellerId": "seller-uuid", "role": "OWNER", "status": "ACTIVE"}
+  ]
+}
+```
 
 ### Create Category
 
@@ -514,7 +532,9 @@ Changes the product status to `UNPUBLISHED`.
 Base URL in local Compose: `http://localhost:8085`
 
 Inventory APIs require `Authorization: Bearer <access-token>` with `SELLER_OWNER`, `SELLER_STAFF`, `ADMIN`, `SUPER_ADMIN`, or `SERVICE` role. The auth service currently issues marketplace user/admin roles; `SERVICE` is accepted by inventory authorization for future service-to-service tokens but is not part of the current auth role model.
-Requests still carry explicit seller and product ids; catalog lookups and ownership checks are future refinements.
+Seller user stock and reservation access also requires an active seller membership claim for the
+stock's seller. `ADMIN`, `SUPER_ADMIN`, and `SERVICE` bypass seller membership checks for platform
+support and service-to-service workflows. Catalog product ownership lookups remain future scope.
 
 ### Upsert Stock
 
