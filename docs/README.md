@@ -2,7 +2,7 @@
 
 This directory is the source of truth for product, architecture, delivery, and operations documentation for Market Basket Platform.
 
-Current domain implementation is deepest in auth. Seller approval and memberships, seller-owned catalog categories/products, inventory stock/reservations, and first-pass seller ownership authorization are implemented as domain foundations. Customer, subscription, order, and notification remain mostly bounded-context scaffolds, with some consumer contract tests already recording expected event inputs.
+Current domain implementation is deepest in auth. Customer profiles, seller approval and memberships, seller-owned catalog categories/products, inventory stock/reservations, and first-pass ownership authorization are implemented as domain foundations. Subscription, order, and notification remain mostly bounded-context scaffolds, with consumer contract tests already recording expected event inputs where relevant.
 
 ## Start Here
 

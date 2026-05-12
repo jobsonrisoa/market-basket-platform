@@ -4,7 +4,7 @@
 
 Market Basket Platform is organized as a microservice backend. Each service is independently buildable, containerized, and configured through environment variables. Docker Compose provides a local and simple server runtime with PostgreSQL, MongoDB, Redis, Kafka, Kong Gateway, Prometheus, Alertmanager, Grafana, and SonarQube.
 
-The current implemented domain depth is concentrated in `auth-service`, with seller store/membership/review foundations in `seller-service`, seller-owned category/product foundations in `catalog-service`, and stock/reservation foundations in `inventory-service`. Customer, subscription, order, and notification are Spring Boot bounded-context scaffolds with shared platform dependencies, migrations, contract-test footholds, and deployment wiring.
+The current implemented domain depth is concentrated in `auth-service`, with customer profile foundations in `customer-service`, seller store/membership/review foundations in `seller-service`, seller-owned category/product foundations in `catalog-service`, and stock/reservation foundations in `inventory-service`. Subscription, order, and notification are Spring Boot bounded-context scaffolds with shared platform dependencies, migrations, contract-test footholds, and deployment wiring.
 
 ## Technology Stack
 
@@ -31,7 +31,7 @@ The current implemented domain depth is concentrated in `auth-service`, with sel
 | Service | Database | Responsibility |
 | --- | --- | --- |
 | `auth-service` | `market_auth` | Identity, credentials, access tokens, refresh tokens, OAuth2 login, JWKS, auth events. |
-| `customer-service` | `market_customer` | Customer profile and customer account domain. |
+| `customer-service` | `market_customer` | Service-owned customer profiles, self-service profile APIs, support/admin profile reads, and auth registration event consumption. |
 | `seller-service` | `market_seller` | Seller store profile, platform approval workflow, staff membership, and seller event contracts. |
 | `catalog-service` | `market_catalog` | Seller-owned categories, products, draft/published lifecycle, and catalog event contracts. |
 | `subscription-service` | `market_subscription` | Subscription plans and recurring customer relationships. |
@@ -84,12 +84,13 @@ Persistence entities include:
 - Refresh-token reuse revokes the whole token family.
 - JWKS is exposed from `/.well-known/jwks.json` so downstream services can validate JWTs without calling the auth service for every request.
 - Kong currently routes `/auth/**` and `/.well-known/jwks.json` to auth-service. The Spring OAuth2 entry points exist on auth-service and still need Kong routes before gateway-only OAuth login is expected to work.
-- Seller-service, catalog-service, and inventory-service validate auth-service JWTs through JWKS, issuer, and audience checks, then map `roles` to `ROLE_*` authorities and `permissions` to direct authorities. Public catalog reads remain open. Seller-service enforces ownership against its membership table. Catalog and inventory write paths require platform/service roles or active `seller_memberships` JWT claims for the target seller.
+- Customer-service, seller-service, catalog-service, and inventory-service validate auth-service JWTs through JWKS, issuer, and audience checks, then map `roles` to `ROLE_*` authorities and `permissions` to direct authorities. Public catalog reads remain open. Customer-service uses the JWT subject as the auth user id for self-service profile access. Seller-service enforces ownership against its membership table. Catalog and inventory write paths require platform/service roles or active `seller_memberships` JWT claims for the target seller.
 
 ## Ownership Authorization
 
-Seller ownership authorization is enforced at the service boundary after JWT validation:
+Ownership authorization is enforced at the service boundary after JWT validation:
 
+- Customer-service self-service profile APIs require the `CUSTOMER` role and use the JWT subject as the only editable customer identity. Support reads require `SUPPORT_AGENT`, `ADMIN`, or `SUPER_ADMIN`.
 - Seller-service is the source of truth for seller memberships. Store reads require an active seller membership or platform admin role, while membership management requires an active seller `OWNER` membership or platform admin role.
 - Seller store creation and platform review operations use the JWT subject as the actor user id. Request-body actor ids are ignored when present for backward compatibility.
 - Catalog-service keeps public read endpoints open, but product writes require `ADMIN`/`SUPER_ADMIN` or an active `seller_memberships` JWT claim matching the product seller.
@@ -113,14 +114,14 @@ The auth service has an outbox persistence model and Kafka publisher. This allow
 - `auth.user.google_account_linked.v1`
 
 Event contracts should remain versioned. Consumers should be tolerant of additive fields.
-The first implemented event-governance mechanism is JSON Schema producer and consumer contract testing. `OutboxEvent` carries structured payload fields, the JPA adapter serializes payload JSON for the outbox table, and the auth outbox publisher serializes Kafka envelopes with Jackson. Seller-service has a producer contract for `seller.approved.v1`, catalog-service has a producer contract for `catalog.product.published.v1`, and inventory-service has producer contracts for `inventory.stock_reserved.v1` and `inventory.reservation_released.v1`. Catalog, subscription, order, and notification include first consumer contract tests using recorded examples. Seller/catalog/inventory outbox persistence and Kafka publishing remain deferred until consumers need those events at runtime. Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
+The first implemented event-governance mechanism is JSON Schema producer and consumer contract testing. `OutboxEvent` carries structured payload fields, the JPA adapter serializes payload JSON for the outbox table, and the auth outbox publisher serializes Kafka envelopes with Jackson. Customer-service has a runtime Kafka consumer for `auth.user.registered.v1` that creates profiles idempotently using the recorded auth example in contract tests. Seller-service has a producer contract for `seller.approved.v1`, catalog-service has a producer contract for `catalog.product.published.v1`, and inventory-service has producer contracts for `inventory.stock_reserved.v1` and `inventory.reservation_released.v1`. Catalog, subscription, order, and notification include first consumer contract tests using recorded examples. Seller/catalog/inventory outbox persistence and Kafka publishing remain deferred until consumers need those events at runtime. Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
 
 ## Data Ownership
 
 Each service owns its database and should be the only writer to its own schema. Cross-service data sharing should happen through APIs or events, not direct database joins.
 
 Local Compose creates all service databases from `infra/postgres/init.sql`.
-Service-local Flyway migrations stored in each service's `src/main/resources/db/migration` directory now own schema creation and evolution. Auth, seller, catalog, and inventory have real domain tables; customer, subscription, order, and notification currently have placeholder `select 1` migrations. Hibernate validates mapped schemas instead of creating or updating production tables.
+Service-local Flyway migrations stored in each service's `src/main/resources/db/migration` directory now own schema creation and evolution. Auth, customer, seller, catalog, and inventory have real domain tables; subscription, order, and notification currently have placeholder `select 1` migrations. Hibernate validates mapped schemas instead of creating or updating production tables.
 CI validates every service migration set against a disposable PostgreSQL database through the Flyway Maven plugin. Deployments run pinned Flyway Compose runners before app rollout, and services still run startup migrations as a safety net.
 
 ## Deployment Architecture
@@ -143,4 +144,4 @@ Images are tagged with both the Git SHA and `main` on pushes to `main`. Deployme
 - No centralized service discovery is defined.
 - Startup Flyway remains enabled as a safety net while deployment-time migration execution matures.
 - No distributed tracing is configured yet.
-- Resource ownership enforcement across services is still minimal; current downstream authorization gates by JWT role before deeper seller-membership lookups are introduced.
+- Gateway-side JWT authorization remains deferred; downstream services currently perform JWT validation and ownership checks themselves.

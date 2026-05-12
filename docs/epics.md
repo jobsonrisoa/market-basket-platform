@@ -48,9 +48,11 @@ Implemented notes:
 
 ## Epic 2: Customer Profile Foundation
 
+Status: implemented.
+
 Goal: create the first real customer domain slice so registered shoppers have service-owned profile data outside auth.
 
-Current state: `customer-service` is a bounded-context scaffold with a placeholder Flyway migration. Auth emits `auth.user.registered.v1`, and the PRD identifies customer profile management as future scope.
+Current state: `customer-service` owns a `customer_profiles` table keyed one-to-one by auth user id. Customers can read and update their own profile through JWT-subject ownership, support/admin roles can read profiles for operations, and a runtime Kafka consumer handles `auth.user.registered.v1` idempotently.
 
 Primary services touched: `customer-service`, `auth-service` event contract examples if needed.
 
@@ -80,6 +82,14 @@ Event/API/test expectations:
 - Consumer handling for `auth.user.registered.v1` must be idempotent.
 - API docs must describe customer profile endpoints once implemented.
 - Flyway migration validation must pass for `customer-service`.
+
+Implemented notes:
+
+- `customer_profiles.auth_user_id` is unique and service-owned.
+- `GET /customers/me/profile` and `PATCH /customers/me/profile` use the authenticated JWT subject.
+- `GET /customers/profiles/{authUserId}` and `GET /customers/profiles` require `SUPPORT_AGENT`, `ADMIN`, or `SUPER_ADMIN`.
+- `AuthUserRegisteredConsumer` consumes `auth.user.registered.v1` and calls idempotent profile creation.
+- Tests cover domain normalization, profile ownership, support/admin reads, missing profiles, JWT requirements, recorded auth event consumption, and duplicate registration events.
 
 ## Epic 3: Seller-Approved Catalog Publishing
 

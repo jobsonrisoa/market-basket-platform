@@ -4,7 +4,7 @@
 
 Market Basket Platform is a backend platform for a grocery subscription marketplace. It is designed as a set of independently deployable Spring Boot services with clear bounded contexts for identity, customers, sellers, catalog, subscriptions, orders, inventory, and notifications.
 
-The implemented foundation now covers authentication plus the first seller, catalog, and inventory slices: users can register, log in, receive JWT access tokens, rotate refresh tokens, log out, and authenticate downstream requests through published JWKS keys; sellers can be created and reviewed with membership-scoped access; products can be managed and published with seller ownership checks; and inventory can be stocked and reserved with seller ownership checks.
+The implemented foundation now covers authentication plus the first customer, seller, catalog, and inventory slices: users can register, log in, receive JWT access tokens, rotate refresh tokens, log out, and authenticate downstream requests through published JWKS keys; registered customers get service-owned profiles keyed by auth user id; sellers can be created and reviewed with membership-scoped access; products can be managed and published with seller ownership checks; and inventory can be stocked and reserved with seller ownership checks.
 
 ## Target Users
 
@@ -27,7 +27,7 @@ The implemented foundation now covers authentication plus the first seller, cata
 - This repository does not currently include a frontend application.
 - This repository includes a local Kong Gateway configuration for public HTTP API routing.
 - This repository does not currently define Kubernetes manifests, Helm charts, or Terraform.
-- Seller, catalog, and inventory have first-pass domain APIs, but are not feature-complete marketplace implementations. Customer, subscription, order, and notification are still mostly scaffolds.
+- Customer, seller, catalog, and inventory have first-pass domain APIs, but are not feature-complete marketplace implementations. Subscription, order, and notification are still mostly scaffolds.
 
 ## MVP Scope
 
@@ -54,7 +54,7 @@ The implemented foundation now covers authentication plus the first seller, cata
 
 ## Future Scope
 
-- Customer profile management.
+- Full customer address books, payment profiles, allergies, delivery preferences, and subscription preferences.
 - Product catalog search and read-model optimization.
 - Seller approval enforcement during catalog publishing.
 - Subscription plan and renewal workflows.
@@ -78,6 +78,9 @@ The implemented foundation now covers authentication plus the first seller, cata
 | Auth | Publish auth domain events through an outbox. | Implemented in `auth-service`. |
 | Auth | Expose marketplace roles and permissions in auth responses and JWT claims. | Implemented in `auth-service`. |
 | Auth | Allow authorized admins to assign and revoke roles, suspend users, and reactivate users. | Implemented in `auth-service`. |
+| Customer | Create exactly one service-owned customer profile per registered auth user. | Implemented in `customer-service` through an idempotent `auth.user.registered.v1` consumer. |
+| Customer | Allow customers to read and update only their own profile. | Implemented in `customer-service` using JWT subject ownership. |
+| Customer | Allow support/admin roles to read customer profiles for operations. | Implemented for `SUPPORT_AGENT`, `ADMIN`, and `SUPER_ADMIN` in `customer-service`. |
 | Seller | Create seller stores and manage owner/staff memberships. | Implemented in `seller-service`. |
 | Seller | Approve or reject seller stores through platform review. | Implemented in `seller-service`. |
 | Catalog | Create categories and seller-owned products with draft, published, and unpublished lifecycle states. | Implemented in `catalog-service`. |
@@ -89,8 +92,8 @@ The implemented foundation now covers authentication plus the first seller, cata
 | Platform | Publish service images on `main`. | Implemented through GitHub Actions. |
 | Platform | Deploy dev after successful image publishing. | Implemented through GitHub Actions. |
 | Platform | Deploy dev and prod with explicit image tags and smoke checks. | Implemented through GitHub Actions. |
-| Platform | Validate auth-service JWTs in downstream business services. | Implemented first in seller, catalog, and inventory services with role gates and issuer/audience validation. |
-| Platform | Enforce seller ownership for protected seller, catalog, and inventory operations. | Implemented in seller, catalog, and inventory services. |
+| Platform | Validate auth-service JWTs in downstream business services. | Implemented in customer, seller, catalog, and inventory services with role gates and issuer/audience validation. |
+| Platform | Enforce customer and seller ownership for protected operations. | Implemented for customer profiles in customer-service and seller-scoped operations in seller, catalog, and inventory services. |
 | Platform | Expose local observability and quality tools. | Implemented with Prometheus, Alertmanager, Grafana dashboards, exporters, Sentry wiring, and local SonarQube. |
 
 ## Non-Functional Requirements
@@ -131,7 +134,7 @@ Initial route plan:
 | --- | --- | --- |
 | `/auth/**` | `auth-service` | Registration, login, refresh, logout, current-user, and admin user-management endpoints. |
 | `/.well-known/jwks.json` | `auth-service` | Public JWKS route for downstream JWT validation. |
-| `/customers/**` | `customer-service` | Shopper profile, addresses, preferences, payment profile references. |
+| `/customers/**` | `customer-service` | Shopper profile self-service and support/admin profile reads. |
 | `/sellers/**` | `seller-service` | Seller onboarding, store profile, staff membership, compliance status, and store operations. |
 | `/catalog/**` | `catalog-service` | Public browsing plus seller-owned product management. |
 | `/subscriptions/**` | `subscription-service` | Shopper basket plans, recurrence rules, skips, pauses, renewals. |
@@ -197,8 +200,9 @@ RBAC implementation status and remaining plan:
 3. Added permissions such as `SELLER_CATALOG_MANAGE`, `SELLER_INVENTORY_MANAGE`, `SELLER_ORDER_FULFILL`, `CUSTOMER_SUBSCRIPTION_MANAGE_OWN`, `PLATFORM_SELLER_REVIEW`, `AUTH_USER_ROLE_ASSIGN`, and `AUTH_USER_ROLE_REVOKE`.
 4. Added role-change outbox events with actor, target user, and changed role.
 5. Added seller membership records outside auth in `seller-service`.
-6. Seller, catalog, and inventory writes now combine JWT roles with seller ownership checks. Seller-service checks its membership table; catalog and inventory require active `seller_memberships` JWT claims for seller-scoped writes.
-7. Keep first-admin bootstrap operational and auditable; only `SUPER_ADMIN` should grant `ADMIN` or `SUPER_ADMIN` after bootstrap.
+6. Customer-service self-service profile APIs use the JWT subject as the profile owner and allow support/admin profile reads through platform roles.
+7. Seller, catalog, and inventory writes now combine JWT roles with seller ownership checks. Seller-service checks its membership table; catalog and inventory require active `seller_memberships` JWT claims for seller-scoped writes.
+8. Keep first-admin bootstrap operational and auditable; only `SUPER_ADMIN` should grant `ADMIN` or `SUPER_ADMIN` after bootstrap.
 
 ### Kafka Event Contracts and Testing
 
@@ -214,6 +218,7 @@ Implementation status:
 - `OutboxEvent` now carries structured payload fields, and the JPA outbox adapter serializes payloads to JSON for persistence.
 - `KafkaOutboxPublisher` now builds the event envelope with Jackson instead of string formatting.
 - A Testcontainers Kafka integration test proves pending outbox events are published with the expected topic, key, envelope, payload object, and published status.
+- Customer-service consumes `auth.user.registered.v1` at runtime and contract-tests the recorded auth registration example, including duplicate-event idempotency.
 - Seller, catalog, and inventory have JSON Schema producer contract tests plus recorded example payloads.
 - Catalog, subscription, order, and notification include first consumer contract tests around seller-approved, product-published, inventory, and notification-relevant events.
 - Kafka, PostgreSQL, and Redis Testcontainers images are pinned in auth-service tests.
@@ -237,7 +242,7 @@ Specialist review brief:
 Repo-specific specialist concerns:
 
 - `KafkaOutboxPublisher` currently sends each event to a topic named exactly like the event type, for example `auth.user.registered.v1`. Decide before production whether to keep one-topic-per-event-type or move to domain topics such as `auth.events` with `eventType` inside the envelope.
-- Existing contract tests prove producer schemas, selected consumer examples, and one auth broker publish path. They do not yet prove runtime consumers or consumer idempotency.
+- Existing contract tests prove producer schemas, selected consumer examples, one auth broker publish path, and the customer-service registration consumer's idempotent profile creation. Most future runtime consumers still need idempotency coverage as they are implemented.
 
 Concerns the specialist should explicitly evaluate:
 
@@ -279,10 +284,11 @@ Implementation status:
 - CI includes a dedicated PostgreSQL-backed migration validation matrix that applies migrations, validates them, and prints Flyway info for every service database.
 - Dev and prod deployment workflows run controlled Flyway migration runners before application rollout.
 - `auth-service` owns schema migrations for users, roles, OAuth accounts, refresh tokens, and outbox events.
+- `customer-service` owns schema migrations for customer profiles keyed by auth user id, including profile status, contact fields, locale, timestamps, and JSONB placeholders for future preferences.
 - `seller-service` owns schema migrations for seller stores, owner/staff memberships, and approval review state.
 - `catalog-service` owns schema migrations for categories and seller-owned products.
 - `inventory-service` owns schema migrations for stock records and reservations.
-- Customer, subscription, order, and notification currently have placeholder initial migrations so future domain migrations append cleanly without reintroducing Hibernate schema generation.
+- Subscription, order, and notification currently have placeholder initial migrations so future domain migrations append cleanly without reintroducing Hibernate schema generation.
 
 Remaining production migration work:
 
@@ -294,15 +300,20 @@ Remaining production migration work:
 
 The previous platform-hardening roadmap candidates now have initial implementation. Auth, event contracts, Flyway migrations, deployment migration gates, seller membership, catalog foundation, immutable image deployment, and smoke checks are in place. The product roadmap should continue shifting from platform foundation toward marketplace domain depth.
 
-1. Catalog Foundation
+1. Customer Profile Foundation
+   - Implemented: customer profile table in `customer-service` with unique auth user id ownership.
+   - Implemented: customer self-service read/update APIs and support/admin profile read APIs.
+   - Implemented: idempotent runtime consumer for `auth.user.registered.v1` with recorded-example contract tests.
+   - Remaining: full address book, payment references, allergies, dislikes, and delivery/subscription preferences.
+2. Catalog Foundation
    - Implemented: product and category CRUD foundation in `catalog-service`.
    - Implemented: seller-owned products with draft, published, and unpublished lifecycle states.
    - Implemented: first catalog event contract, `catalog.product.published.v1`.
-2. Seller Approval
+3. Seller Approval
    - Implemented: seller stores now start in `PENDING_REVIEW` and can be approved or rejected by platform review endpoints.
    - Implemented: first seller event contract, `seller.approved.v1`.
    - Remaining: enforce seller approval during catalog publishing once inter-service authorization and seller lookup are added.
-3. Inventory Foundation
+4. Inventory Foundation
    - Implemented: seller-managed stock records tied to catalog product ids.
    - Implemented: availability and reservation groundwork for order and subscription workflows.
    - Implemented: first inventory event contracts, `inventory.stock_reserved.v1` and `inventory.reservation_released.v1`.

@@ -72,6 +72,7 @@ Useful local checks:
 
 ```bash
 curl http://localhost:8080/actuator/prometheus
+curl http://localhost:8081/actuator/health
 curl http://localhost:8000/.well-known/jwks.json
 curl http://localhost:8100/status
 curl http://localhost:9090/-/ready
@@ -182,6 +183,7 @@ Centralized log aggregation is not configured yet. Prefer structured JSON logs b
 2. Inside Docker Compose, services should use `kafka:29092`.
 3. From the host, local tools should use `localhost:9092`.
 4. Check Kafka health with `docker compose ps kafka`.
+5. For customer profile creation from registrations, confirm `customer-service` can consume the `auth.user.registered.v1` topic or the configured `AUTH_USER_REGISTERED_TOPIC`.
 
 ## Runbook: Missing Prometheus Target
 

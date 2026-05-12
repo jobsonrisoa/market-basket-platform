@@ -124,6 +124,12 @@ Auth variables:
 | `AUTH_JWT_ACCESS_TOKEN_TTL` | `15m` |
 | `AUTH_REFRESH_TOKEN_TTL` | `30d` |
 
+Customer-service event variables:
+
+| Variable | Default |
+| --- | --- |
+| `AUTH_USER_REGISTERED_TOPIC` | `auth.user.registered.v1` |
+
 ## Database Bootstrap
 
 `infra/postgres/init.sql` creates one database per service:

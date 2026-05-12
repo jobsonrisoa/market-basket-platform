@@ -163,7 +163,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   participant Client
-  participant Service as Seller/Catalog/Inventory Service
+  participant Service as Customer/Seller/Catalog/Inventory Service
   participant JwtDecoder as JWKS JWT Decoder
   participant SellerDb as Seller Membership Store
   participant Domain as Domain Use Case
@@ -172,7 +172,12 @@ sequenceDiagram
   Service->>JwtDecoder: Validate issuer, audience, signature
   JwtDecoder-->>Service: Subject, roles, permissions, seller_memberships
 
-  alt ADMIN or SUPER_ADMIN
+  alt customer profile self-service
+    Service->>Domain: Use JWT subject as authUserId
+    Domain-->>Service: Allow own profile read/update
+  else SUPPORT_AGENT, ADMIN, or SUPER_ADMIN customer read
+    Service->>Domain: Allow platform customer support read
+  else ADMIN or SUPER_ADMIN
     Service->>Domain: Allow platform action
   else seller-service membership operation
     Service->>SellerDb: Load membership by sellerId and JWT subject
@@ -183,6 +188,29 @@ sequenceDiagram
     Service->>Domain: Allow active matching seller membership
   else no active ownership
     Service-->>Client: 403 Forbidden
+  end
+```
+
+## Customer Profile Creation Flow
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant Auth as auth-service
+  participant Outbox as Auth Outbox Publisher
+  participant Kafka
+  participant Customer as customer-service
+  participant CustomerDb as market_customer
+
+  Client->>Auth: POST /auth/register
+  Auth->>Auth: Create user and outbox event
+  Outbox->>Kafka: auth.user.registered.v1
+  Kafka-->>Customer: Deliver registration event
+  Customer->>CustomerDb: Find profile by auth user id
+  alt profile missing
+    Customer->>CustomerDb: Insert ACTIVE customer profile
+  else duplicate event
+    Customer->>CustomerDb: Leave existing profile unchanged
   end
 ```
 

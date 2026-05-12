@@ -41,7 +41,7 @@ For each service, the build job:
 6. Uploads Surefire reports.
 7. Uploads the built service jar.
 
-Application tests use Testcontainers for PostgreSQL, Redis, and Kafka. Auth tests also cover JWT issuing and Kafka outbox publishing, while seller/catalog/inventory and selected downstream services include JSON Schema event contract tests. Since every service now uses Flyway and Hibernate validation, the package step also exercises startup-time migration behavior.
+Application tests use Testcontainers for PostgreSQL, Redis, and Kafka. Auth tests also cover JWT issuing and Kafka outbox publishing. Customer tests cover profile persistence, HTTP ownership rules, and idempotent `auth.user.registered.v1` consumption, while seller/catalog/inventory and selected downstream services include JSON Schema event contract tests. Since every service now uses Flyway and Hibernate validation, the package step also exercises startup-time migration behavior.
 
 ## Image Publishing
 

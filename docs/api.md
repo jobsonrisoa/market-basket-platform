@@ -1,6 +1,6 @@
 # API Reference
 
-This document covers the endpoints currently implemented in the repository. Auth, seller, catalog, and inventory have domain controllers. Customer, subscription, order, and notification currently expose only framework and Actuator behavior, plus contract-test groundwork where present.
+This document covers the endpoints currently implemented in the repository. Auth, customer, seller, catalog, and inventory have domain controllers. Subscription, order, and notification currently expose only framework and Actuator behavior, plus contract-test groundwork where present.
 
 ## Auth Service
 
@@ -351,6 +351,74 @@ Authorization: Bearer <access-token>
 Response: `204 No Content`
 
 Marks the membership as `REMOVED`.
+
+## Customer Service
+
+Base URL in local Compose: `http://localhost:8081`
+
+Customer profile endpoints require `Authorization: Bearer <access-token>`. Customer self-service
+endpoints use the JWT subject as the auth user id and require the `CUSTOMER` role. Support reads
+require `SUPPORT_AGENT`, `ADMIN`, or `SUPER_ADMIN`.
+
+Customer-service owns customer profile data keyed one-to-one by auth user id. It consumes
+`auth.user.registered.v1` from auth-service to create initial profiles idempotently; duplicate
+registration events leave the existing profile unchanged.
+
+### Get Current Customer Profile
+
+```http
+GET /customers/me/profile
+Authorization: Bearer <access-token>
+```
+
+Response: `200 OK`
+
+Returns the authenticated customer's profile id, auth user id, display name, phone, default locale,
+profile status, and timestamps.
+
+### Update Current Customer Profile
+
+```http
+PATCH /customers/me/profile
+Authorization: Bearer <access-token>
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "displayName": "Jane Market",
+  "phone": "+15551234567",
+  "defaultLocale": "pt-BR"
+}
+```
+
+Response: `200 OK`
+
+Updates only the authenticated customer's own editable profile fields.
+
+### Support Read Customer Profile
+
+```http
+GET /customers/profiles/{authUserId}
+Authorization: Bearer <access-token>
+```
+
+Response: `200 OK`
+
+Returns the profile for support and platform operations.
+
+### Support List Customer Profiles
+
+```http
+GET /customers/profiles
+Authorization: Bearer <access-token>
+```
+
+Response: `200 OK`
+
+Returns customer profiles for platform support workflows.
 
 ## Catalog Service
 
