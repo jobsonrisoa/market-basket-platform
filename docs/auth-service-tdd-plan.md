@@ -1,6 +1,6 @@
 # Auth Service TDD Plan
 
-Status note: this is a historical implementation guide for the auth bounded context. The current source already implements the core auth slices, marketplace-aware RBAC, outbox persistence, Kafka publishing, Flyway migrations, and contract tests; use [prd.md](prd.md), [architecture.md](architecture.md), and [api.md](api.md) for current repo status.
+Status note: this is a historical implementation guide for the auth bounded context. The current source already implements the core auth slices, marketplace-aware RBAC (`CUSTOMER`, `SELLER_OWNER`, `SELLER_STAFF`, `SUPPORT_AGENT`, `ADMIN`, `SUPER_ADMIN`), outbox persistence, Kafka publishing, Flyway migrations, admin endpoints, Google OAuth2 entry points, JWKS, and contract tests; use [prd.md](prd.md), [architecture.md](architecture.md), and [api.md](api.md) for current repo status.
 
 Este documento guia a implementacao incremental do `auth-service` usando o ciclo Red, Green, Refactor. Cada fatia deve ser implementada em commits pequenos, com testes escritos antes do codigo de producao.
 
@@ -156,6 +156,8 @@ auth.session.login_failed.v1
 auth.account.locked.v1
 ```
 
+Status atual: `login_succeeded` e `login_failed` existem; `auth.account.locked.v1` continua planejado.
+
 ## Fatia 4: Emissao JWT
 
 Objetivo: emitir access tokens JWT assinados e validaveis pelos outros servicos.
@@ -258,11 +260,11 @@ Decisao de dominio:
 - `subscription-service` deve possuir plano, ciclo de entrega, cesta, renovacao, pausas e estados de assinatura.
 - O JWT pode carregar claims estaveis e pequenas para autorizacao, mas nao deve carregar detalhes mutaveis da assinatura.
 
-Modelo inicial:
+Modelo inicial implementado:
 
-- `Role`: `CUSTOMER`, `ADMIN`, `SUPER_ADMIN`.
+- `Role`: `CUSTOMER`, `SELLER_OWNER`, `SELLER_STAFF`, `SUPPORT_AGENT`, `ADMIN`, `SUPER_ADMIN`.
 - `Permission`: acoes derivadas das roles para endpoints sensiveis.
-- `AccountProfile`: `CUSTOMER`, `ADMIN`.
+- `AccountProfile`: `CUSTOMER`, `SELLER`, `PLATFORM`.
 - `CustomerProfileType`: `INDIVIDUAL`, `HOUSEHOLD`, `BUSINESS`.
 
 Regras:
@@ -284,7 +286,7 @@ AUTH_USER_ROLE_ASSIGN
 AUTH_USER_ROLE_REVOKE
 AUTH_ADMIN_ACCESS
 CUSTOMER_PROFILE_ACCESS
-SUBSCRIPTION_MANAGE_OWN
+CUSTOMER_SUBSCRIPTION_MANAGE_OWN
 ```
 
 Red:
@@ -323,8 +325,7 @@ Green:
   - `customer_profile_type`
 - Atualizar `JwtTokenIssuer` para emitir claims:
   - `roles: ["CUSTOMER"]`
-  - `permissions: ["CUSTOMER_PROFILE_ACCESS", "SUBSCRIPTION_MANAGE_OWN"]`
-  - `scope: "auth:user"` inicialmente, mantendo compatibilidade
+  - `permissions: ["CUSTOMER_PROFILE_ACCESS", "CUSTOMER_SUBSCRIPTION_MANAGE_OWN"]`
   - `account_profile: "CUSTOMER"`
   - `customer_profile_type: "INDIVIDUAL"`
 - Configurar Spring Security com `JwtAuthenticationConverter` mapeando `roles` para authorities `ROLE_CUSTOMER`, `ROLE_ADMIN` e `ROLE_SUPER_ADMIN`, alem de mapear `permissions` para authorities sem prefixo.
@@ -347,6 +348,8 @@ auth.user.account_suspended.v1
 auth.user.account_reactivated.v1
 auth.user.customer_profile_type_changed.v1
 ```
+
+Status atual: role assigned/removed e account suspended/reactivated existem; `customer_profile_type_changed` continua planejado.
 
 Payload minimo para role:
 
@@ -380,7 +383,7 @@ Endpoint de perfil de cliente alvo:
 PATCH /auth/me/customer-profile-type
 ```
 
-Observacao: esse endpoint so altera a classificacao leve usada por auth e clientes. A assinatura real continua em `subscription-service`.
+Status atual: esse endpoint ainda nao foi implementado. Quando existir, deve alterar apenas a classificacao leve usada por auth e clientes. A assinatura real continua em `subscription-service`.
 
 ## Fatia 8: Google Login
 
@@ -479,6 +482,8 @@ auth.session.revoked.v1
 auth.account.locked.v1
 auth.account.unlocked.v1
 ```
+
+Status atual: os topicos implementados no dominio auth sao `auth.user.registered.v1`, `auth.user.role_assigned.v1`, `auth.user.role_removed.v1`, `auth.user.account_suspended.v1`, `auth.user.account_reactivated.v1`, `auth.user.google_account_linked.v1`, `auth.session.login_succeeded.v1`, `auth.session.login_failed.v1`, `auth.session.refresh_token_rotated.v1`, `auth.session.refresh_token_reused.v1` e `auth.session.revoked.v1`. Os demais permanecem como ideias do plano historico.
 
 ## Banco de Dados Inicial
 

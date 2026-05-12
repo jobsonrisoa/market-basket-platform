@@ -47,7 +47,10 @@ flowchart TB
 
   subgraph obs[Observability]
     prometheus[Prometheus :9090]
+    alertmanager[Alertmanager :9093]
     grafana[Grafana :3000]
+    sonar[SonarQube :9000]
+    exporters[Postgres, Redis, Kafka exporters]
   end
 
   client --> kong
@@ -89,6 +92,8 @@ flowchart TB
 
   prometheus -. scrape .-> services
   prometheus -. scrape .-> kong
+  prometheus -. scrape .-> exporters
+  prometheus --> alertmanager
   grafana --> prometheus
 ```
 
@@ -161,6 +166,7 @@ flowchart LR
   push[Push to main]
   ci[CI matrix: Flyway validation, Spotless, package, reports, jars]
   docker[Docker Images matrix: build and push]
+  migrations[Deploy migration runners]
   ghcr[GHCR images tagged SHA and main]
   dev[Deploy Dev over SSH]
   prod[Manual Deploy Prod over SSH]
@@ -170,6 +176,8 @@ flowchart LR
   push --> docker
   docker --> ghcr
   docker -->|workflow_run success| dev
+  dev --> migrations
+  prod --> migrations
   ghcr --> dev
   ghcr --> prod
 ```
@@ -182,6 +190,7 @@ flowchart TB
   host[Deployment Host]
   repo[Checked-out repository]
   compose[Docker Compose]
+  migrations[Flyway migration runners]
   registry[GitHub Container Registry]
   stack[Running platform containers]
 
@@ -189,6 +198,7 @@ flowchart TB
   host --> repo
   repo -->|git pull main| repo
   repo --> compose
+  compose --> migrations
   compose -->|docker compose pull| registry
   compose -->|docker compose up -d --remove-orphans| stack
 ```

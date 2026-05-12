@@ -28,6 +28,8 @@ This starts:
 - Services on ports `8080` through `8087`
 - Prometheus on `localhost:9090`
 - Grafana on `localhost:3000`
+- Alertmanager on `localhost:9093`
+- SonarQube on `localhost:9000`
 
 Stop the platform:
 
@@ -117,6 +119,7 @@ Auth variables:
 | --- | --- |
 | `AUTH_JWT_ISSUER` | `http://localhost:8000` |
 | `AUTH_JWT_AUDIENCE` | `market-basket-platform` |
+| `AUTH_JWT_JWK_SET_URI` | `http://auth-service:8080/.well-known/jwks.json` in Compose |
 | `AUTH_JWT_KEY_ID` | `local-dev-key` |
 | `AUTH_JWT_ACCESS_TOKEN_TTL` | `15m` |
 | `AUTH_REFRESH_TOKEN_TTL` | `30d` |
@@ -153,6 +156,16 @@ Run the same controlled migration step used by deployment:
 ```bash
 ./scripts/run-migrations.sh
 ```
+
+## Local Quality Tools
+
+SonarQube Community Edition is available when the full Compose stack is running:
+
+```text
+http://localhost:9000
+```
+
+The committed `sonar-project.properties` currently targets auth-service source, tests, bytecode, Surefire reports, and JaCoCo XML coverage. Broaden it when Sonar analysis is expanded to the other services.
 
 ## Troubleshooting
 

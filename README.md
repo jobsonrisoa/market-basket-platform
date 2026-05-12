@@ -1,21 +1,21 @@
 # Market Basket Platform
 
-Market Basket Platform is a Spring Boot microservice system for a grocery or market commerce domain. The repository currently contains eight independently buildable services, shared local infrastructure through Docker Compose, Kong Gateway for local edge routing, and GitHub Actions workflows for CI, container publication, and environment deployments.
+Market Basket Platform is a Spring Boot microservice system for a grocery subscription marketplace. The repository currently contains eight independently buildable services, shared local infrastructure through Docker Compose, Kong Gateway for local edge routing, Prometheus/Grafana/Alertmanager observability, local SonarQube, and GitHub Actions workflows for CI, container publication, migration-gated deployment, and smoke checks.
 
 ## Services
 
 | Service | Port | Current role |
 | --- | ---: | --- |
-| `auth-service` | 8080 | User registration, login, JWT access tokens, refresh-token rotation, logout, Google OAuth2 entry points, and JWKS publication. |
+| `auth-service` | 8080 | User registration, login, JWT access tokens, refresh-token rotation, logout, admin RBAC, Google OAuth2 entry points, JWKS publication, and auth outbox publishing. |
 | `customer-service` | 8081 | Customer bounded context scaffold. |
-| `seller-service` | 8087 | Seller store approval and staff membership foundation. |
-| `catalog-service` | 8082 | Seller-owned category and product catalog foundation. |
+| `seller-service` | 8087 | Seller store creation, approval/rejection workflow, owner/staff memberships, JWT role gates, and seller event contracts. |
+| `catalog-service` | 8082 | Category and seller-owned product management with draft/published/unpublished lifecycle, public reads, JWT role gates, and catalog event contracts. |
 | `subscription-service` | 8083 | Subscription bounded context scaffold. |
 | `order-service` | 8084 | Order bounded context scaffold. |
-| `inventory-service` | 8085 | Seller stock and reservation foundation. |
+| `inventory-service` | 8085 | Seller stock upsert/list/read, active reservation/release workflow, JWT role gates, and inventory event contracts. |
 | `notification-service` | 8086 | Notification bounded context scaffold. |
 
-Each service is a Java 17 Spring Boot application with Maven wrapper support, Spotless formatting, Actuator, JPA, Flyway, Redis, Kafka, validation, Web MVC, PostgreSQL, and Testcontainers-based test dependencies. The auth service also includes Spring Security, OAuth2 resource server/client support, JWT infrastructure, password hashing, refresh tokens, and an outbox publisher.
+Each service is a Java 17 Spring Boot application with Maven wrapper support, Spotless formatting, Actuator, JPA, Flyway, Redis, Kafka, validation, Web MVC, PostgreSQL, Prometheus metrics, Sentry wiring, and Testcontainers-based test dependencies. The auth service also includes Spring Security, OAuth2 resource server/client support, JWT infrastructure, password hashing, refresh tokens, and a Kafka outbox publisher. Seller, catalog, and inventory include OAuth2 resource-server JWT validation against auth-service JWKS.
 
 ## Local Quick Start
 
@@ -47,6 +47,8 @@ Useful local endpoints:
 - Auth JWKS through Kong: `http://localhost:8000/.well-known/jwks.json`
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3000`
+- Alertmanager: `http://localhost:9093`
+- SonarQube: `http://localhost:9000`
 
 ## Documentation
 

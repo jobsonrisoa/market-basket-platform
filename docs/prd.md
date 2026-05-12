@@ -4,7 +4,7 @@
 
 Market Basket Platform is a backend platform for a grocery subscription marketplace. It is designed as a set of independently deployable Spring Boot services with clear bounded contexts for identity, customers, sellers, catalog, subscriptions, orders, inventory, and notifications.
 
-The first implementation focus is the authentication foundation: users can register, log in, receive JWT access tokens, rotate refresh tokens, log out, and authenticate downstream requests through published JWKS keys.
+The implemented foundation now covers authentication plus the first seller, catalog, and inventory slices: users can register, log in, receive JWT access tokens, rotate refresh tokens, log out, and authenticate downstream requests through published JWKS keys; sellers can be created and reviewed; products can be managed and published; and inventory can be stocked and reserved.
 
 ## Target Users
 
@@ -27,7 +27,7 @@ The first implementation focus is the authentication foundation: users can regis
 - This repository does not currently include a frontend application.
 - This repository includes a local Kong Gateway configuration for public HTTP API routing.
 - This repository does not currently define Kubernetes manifests, Helm charts, or Terraform.
-- Most non-auth services are currently scaffolds and should not be treated as feature-complete domain implementations.
+- Seller, catalog, and inventory have first-pass domain APIs, but are not feature-complete marketplace implementations. Customer, subscription, order, and notification are still mostly scaffolds.
 
 ## MVP Scope
 
@@ -56,9 +56,10 @@ The first implementation focus is the authentication foundation: users can regis
 
 - Customer profile management.
 - Product catalog search and read-model optimization.
+- Seller approval enforcement during catalog publishing and ownership checks against seller memberships.
 - Subscription plan and renewal workflows.
 - Basket, checkout, and order lifecycle.
-- Inventory reservation and stock adjustment.
+- Inventory reservation expiry, commit, decrement, and adjustment workflows.
 - Notification delivery through email, SMS, or push providers.
 - API gateway, service-to-service authorization, and centralized request tracing.
 - Controlled pre-deployment database migration execution.
@@ -88,7 +89,8 @@ The first implementation focus is the authentication foundation: users can regis
 | Platform | Publish service images on `main`. | Implemented through GitHub Actions. |
 | Platform | Deploy dev after successful image publishing. | Implemented through GitHub Actions. |
 | Platform | Deploy dev and prod with explicit image tags and smoke checks. | Implemented through GitHub Actions. |
-| Platform | Validate auth-service JWTs in downstream business services. | Implemented first in seller, catalog, and inventory services with role gates. |
+| Platform | Validate auth-service JWTs in downstream business services. | Implemented first in seller, catalog, and inventory services with role gates and issuer/audience validation. |
+| Platform | Expose local observability and quality tools. | Implemented with Prometheus, Alertmanager, Grafana dashboards, exporters, Sentry wiring, and local SonarQube. |
 
 ## Non-Functional Requirements
 
@@ -99,7 +101,7 @@ The first implementation focus is the authentication foundation: users can regis
 - Observability: services expose Actuator health and Prometheus metrics.
 - Operability: deployments should be repeatable with `docker compose pull` and `docker compose up -d --remove-orphans`.
 - Testability: services include Testcontainers dependencies for PostgreSQL and Kafka integration testing.
-- Event contracts: Kafka producers and consumers must publish versioned event types and validate payload compatibility before merge.
+- Event contracts: Kafka producers and consumers must publish or consume versioned event types and validate payload compatibility before merge.
 - Database safety: production schema changes must be versioned, reviewed, repeatable, and executed by the owning service deployment.
 
 ## Success Metrics
@@ -126,7 +128,8 @@ Initial route plan:
 
 | Public route | Service | Notes |
 | --- | --- | --- |
-| `/auth/**` | `auth-service` | Registration, login, refresh, logout, JWKS, OAuth callbacks. |
+| `/auth/**` | `auth-service` | Registration, login, refresh, logout, current-user, and admin user-management endpoints. |
+| `/.well-known/jwks.json` | `auth-service` | Public JWKS route for downstream JWT validation. |
 | `/customers/**` | `customer-service` | Shopper profile, addresses, preferences, payment profile references. |
 | `/sellers/**` | `seller-service` | Seller onboarding, store profile, staff membership, compliance status, and store operations. |
 | `/catalog/**` | `catalog-service` | Public browsing plus seller-owned product management. |
@@ -141,9 +144,10 @@ Implementation status and plan:
 2. Added `infra/kong/kong.yml` with DB-less declarative services, routes, correlation IDs, and Prometheus plugin configuration.
 3. Keep JWT validation in downstream services first while Kong handles routing, correlation IDs, and observability.
 4. Use auth-service JWKS as the source of token validation when Kong-side JWT/OIDC validation is finalized.
-5. Add gateway smoke tests that call the public JWKS route through Kong and Kong's status listener.
+5. Deployment smoke checks call the public JWKS route through Kong and verify Prometheus and Alertmanager readiness.
 6. Configure public routes to require JWT except explicitly public auth endpoints and public catalog browsing once the Kong JWT/OIDC approach is chosen.
-7. Keep direct service ports for local debugging only; production compose or Kubernetes exposure should publish only Kong and observability/admin endpoints intentionally.
+7. Add Kong routes for `/oauth2/**` and `/login/oauth2/**` before requiring Google OAuth2 to work through the gateway; those endpoints currently exist at the auth-service edge.
+8. Keep direct service ports for local debugging only; production compose or Kubernetes exposure should publish only Kong and observability/admin endpoints intentionally.
 
 ### Client Applications
 
@@ -191,8 +195,9 @@ RBAC implementation status and remaining plan:
 2. Added permission-level checks for admin role assignment, role revocation, user suspension, and user reactivation.
 3. Added permissions such as `SELLER_CATALOG_MANAGE`, `SELLER_INVENTORY_MANAGE`, `SELLER_ORDER_FULFILL`, `CUSTOMER_SUBSCRIPTION_MANAGE_OWN`, `PLATFORM_SELLER_REVIEW`, `AUTH_USER_ROLE_ASSIGN`, and `AUTH_USER_ROLE_REVOKE`.
 4. Added role-change outbox events with actor, target user, and changed role.
-5. Add seller membership records outside auth so authorization can combine JWT permissions with resource ownership checks, for example "user has `SELLER_STAFF` and belongs to seller store X."
-6. Keep first-admin bootstrap operational and auditable; only `SUPER_ADMIN` should grant `ADMIN` or `SUPER_ADMIN` after bootstrap.
+5. Added seller membership records outside auth in `seller-service`.
+6. Remaining: combine JWT permissions with resource ownership checks, for example "user has `SELLER_STAFF` and belongs to seller store X."
+7. Keep first-admin bootstrap operational and auditable; only `SUPER_ADMIN` should grant `ADMIN` or `SUPER_ADMIN` after bootstrap.
 
 ### Kafka Event Contracts and Testing
 
@@ -204,10 +209,12 @@ Specialist recommendation for this repository: choose JSON Schema plus contract 
 
 Implementation status:
 
-- Auth events have JSON Schema producer contract tests in `auth-service`, including registration, login, refresh-token, role-change, account-state, and Google account-link events.
+- Auth events have JSON Schema producer contract tests in `auth-service`, including registration, login, refresh-token, session revocation, role-change, account-state, and Google account-link events.
 - `OutboxEvent` now carries structured payload fields, and the JPA outbox adapter serializes payloads to JSON for persistence.
 - `KafkaOutboxPublisher` now builds the event envelope with Jackson instead of string formatting.
 - A Testcontainers Kafka integration test proves pending outbox events are published with the expected topic, key, envelope, payload object, and published status.
+- Seller, catalog, and inventory have JSON Schema producer contract tests plus recorded example payloads.
+- Catalog, subscription, order, and notification include first consumer contract tests around seller-approved, product-published, inventory, and notification-relevant events.
 - Kafka, PostgreSQL, and Redis Testcontainers images are pinned in auth-service tests.
 - Schema Registry is intentionally deferred until multiple production consumers depend on shared topics or manual compatibility review becomes too expensive.
 
@@ -229,7 +236,7 @@ Specialist review brief:
 Repo-specific specialist concerns:
 
 - `KafkaOutboxPublisher` currently sends each event to a topic named exactly like the event type, for example `auth.user.registered.v1`. Decide before production whether to keep one-topic-per-event-type or move to domain topics such as `auth.events` with `eventType` inside the envelope.
-- Existing contract tests prove producer schemas and one broker publish path, but they do not yet prove consumer behavior.
+- Existing contract tests prove producer schemas, selected consumer examples, and one auth broker publish path. They do not yet prove runtime consumers or consumer idempotency.
 
 Concerns the specialist should explicitly evaluate:
 
@@ -246,9 +253,9 @@ Concerns the specialist should explicitly evaluate:
 
 Remaining event-contract plan:
 
-1. Add recorded example event documents beside the schemas for consumer teams.
+1. Continue adding recorded example event documents beside schemas for consumer teams.
 2. Decide the topic strategy: event-type topics now versus domain topics such as `auth.events`.
-3. Add consumer contract tests in each consuming service using recorded example events.
+3. Expand consumer contract tests in each consuming service using recorded example events.
 4. Require compatibility checks in CI: additive optional fields are allowed in the same version; removed fields, renamed fields, type changes, and semantic changes require a new event version.
 5. Revisit Schema Registry when two or more services actively consume the same topic in production or when event evolution becomes difficult to review manually.
 
@@ -270,8 +277,11 @@ Implementation status:
 - Flyway runs automatically when services start in local, CI, and deployed Compose environments.
 - CI includes a dedicated PostgreSQL-backed migration validation matrix that applies migrations, validates them, and prints Flyway info for every service database.
 - Dev and prod deployment workflows run controlled Flyway migration runners before application rollout.
-- `auth-service` owns the first real schema migration for users, roles, OAuth accounts, refresh tokens, and outbox events.
-- Scaffold services include placeholder initial migrations so future domain migrations append cleanly without reintroducing Hibernate schema generation.
+- `auth-service` owns schema migrations for users, roles, OAuth accounts, refresh tokens, and outbox events.
+- `seller-service` owns schema migrations for seller stores, owner/staff memberships, and approval review state.
+- `catalog-service` owns schema migrations for categories and seller-owned products.
+- `inventory-service` owns schema migrations for stock records and reservations.
+- Customer, subscription, order, and notification currently have placeholder initial migrations so future domain migrations append cleanly without reintroducing Hibernate schema generation.
 
 Remaining production migration work:
 
@@ -297,7 +307,7 @@ The previous platform-hardening roadmap candidates now have initial implementati
    - Implemented: first inventory event contracts, `inventory.stock_reserved.v1` and `inventory.reservation_released.v1`.
    - Remaining: reservation commit/expiry and order-driven stock decrement behavior.
 
-Consumer-side event contracts, production observability, and first-pass downstream JWT authorization now have initial implementation. Remaining hardening tracks include resource ownership checks, deeper consumer adoption, production incident routing, and distributed tracing.
+Consumer-side event contracts, local observability, and first-pass downstream JWT authorization now have initial implementation. Remaining hardening tracks include resource ownership checks, deeper consumer adoption, production incident routing, rate limiting, and distributed tracing.
 
 ### Marketplace Domain Workflows
 

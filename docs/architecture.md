@@ -2,9 +2,9 @@
 
 ## Overview
 
-Market Basket Platform is organized as a microservice backend. Each service is independently buildable, containerized, and configured through environment variables. Docker Compose provides a local and simple server runtime with PostgreSQL, MongoDB, Redis, Kafka, Kong Gateway, Prometheus, Alertmanager, and Grafana.
+Market Basket Platform is organized as a microservice backend. Each service is independently buildable, containerized, and configured through environment variables. Docker Compose provides a local and simple server runtime with PostgreSQL, MongoDB, Redis, Kafka, Kong Gateway, Prometheus, Alertmanager, Grafana, and SonarQube.
 
-The current implemented domain depth is concentrated in `auth-service`, with seller store and membership foundations in `seller-service` and seller-owned category/product catalog foundations in `catalog-service`. The remaining services are Spring Boot bounded-context scaffolds with shared platform dependencies and deployment wiring.
+The current implemented domain depth is concentrated in `auth-service`, with seller store/membership/review foundations in `seller-service`, seller-owned category/product foundations in `catalog-service`, and stock/reservation foundations in `inventory-service`. Customer, subscription, order, and notification are Spring Boot bounded-context scaffolds with shared platform dependencies, migrations, contract-test footholds, and deployment wiring.
 
 ## Technology Stack
 
@@ -24,6 +24,7 @@ The current implemented domain depth is concentrated in `auth-service`, with sel
 | Registry | GitHub Container Registry |
 | CI/CD | GitHub Actions |
 | Observability | Spring Actuator, Prometheus, Alertmanager, Grafana |
+| Code quality | Spotless, local SonarQube configuration |
 
 ## Service Boundaries
 
@@ -46,6 +47,7 @@ The current implemented domain depth is concentrated in `auth-service`, with sel
 - Kong Gateway fronts public HTTP APIs on `localhost:8000` with declarative DB-less configuration from `infra/kong/kong.yml`.
 - MongoDB 7 is provisioned, but no current service configuration in this repo consumes it.
 - Prometheus, Alertmanager, and Grafana containers are provisioned for monitoring. Prometheus scrapes Spring Actuator metrics, Kong status metrics, and PostgreSQL, Redis, and Kafka exporters.
+- SonarQube Community Edition is available locally on `localhost:9000`; the committed Sonar properties currently target auth-service source and test coverage.
 
 ## Auth Service Internal Architecture
 
@@ -55,13 +57,14 @@ The current implemented domain depth is concentrated in `auth-service`, with sel
 - `application`: use cases and ports for persistence, token issuing, hashing, and event storage.
 - `infrastructure`: Spring MVC controllers, Spring Security, JWT, crypto, JPA repositories, Kafka outbox publishing, and configuration.
 
-Core use cases:
+Core auth use cases:
 
 - `RegisterUserUseCase`
 - `LoginWithPasswordUseCase`
 - `RefreshTokenUseCase`
 - `LogoutUseCase`
 - `GoogleLoginUseCase`
+- `AdminUserManagementUseCase`
 
 Persistence entities include:
 
@@ -80,27 +83,34 @@ Persistence entities include:
 - Refresh tokens are opaque secrets returned to clients and also set as an HTTP-only cookie by login and refresh responses.
 - Refresh-token reuse revokes the whole token family.
 - JWKS is exposed from `/.well-known/jwks.json` so downstream services can validate JWTs without calling the auth service for every request.
-- Seller-service, catalog-service, and inventory-service validate auth-service JWTs through JWKS and require role-based access on protected business APIs. Public catalog reads remain open. Resource ownership checks that combine JWT roles with seller memberships remain a later authorization refinement.
+- Kong currently routes `/auth/**` and `/.well-known/jwks.json` to auth-service. The Spring OAuth2 entry points exist on auth-service and still need Kong routes before gateway-only OAuth login is expected to work.
+- Seller-service, catalog-service, and inventory-service validate auth-service JWTs through JWKS, issuer, and audience checks, then map `roles` to `ROLE_*` authorities and `permissions` to direct authorities. Public catalog reads remain open. Resource ownership checks that combine JWT roles with seller memberships remain a later authorization refinement.
 
 ## Eventing
 
-The auth service has an outbox persistence model and Kafka publisher. This allows domain events to be stored transactionally with state changes and published after commit. Current planned or implemented event names include:
+The auth service has an outbox persistence model and Kafka publisher. This allows domain events to be stored transactionally with state changes and published after commit. Current implemented auth event names include:
 
 - `auth.user.registered.v1`
 - `auth.session.login_succeeded.v1`
 - `auth.session.login_failed.v1`
 - `auth.session.refresh_token_rotated.v1`
 - `auth.session.refresh_token_reused.v1`
+- `auth.session.revoked.v1`
+- `auth.user.role_assigned.v1`
+- `auth.user.role_removed.v1`
+- `auth.user.account_suspended.v1`
+- `auth.user.account_reactivated.v1`
+- `auth.user.google_account_linked.v1`
 
 Event contracts should remain versioned. Consumers should be tolerant of additive fields.
-The first implemented event-governance mechanism is JSON Schema producer contract testing for auth events in auth-service. `OutboxEvent` carries structured payload fields, the JPA adapter serializes payload JSON for the outbox table, and the outbox publisher serializes Kafka envelopes with Jackson. Seller-service has a producer contract for `seller.approved.v1`, catalog-service has a producer contract for `catalog.product.published.v1`, and inventory-service has producer contracts for `inventory.stock_reserved.v1` and `inventory.reservation_released.v1`; seller/catalog/inventory outbox persistence and Kafka publishing remain deferred until consumers need those events at runtime. Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
+The first implemented event-governance mechanism is JSON Schema producer and consumer contract testing. `OutboxEvent` carries structured payload fields, the JPA adapter serializes payload JSON for the outbox table, and the auth outbox publisher serializes Kafka envelopes with Jackson. Seller-service has a producer contract for `seller.approved.v1`, catalog-service has a producer contract for `catalog.product.published.v1`, and inventory-service has producer contracts for `inventory.stock_reserved.v1` and `inventory.reservation_released.v1`. Catalog, subscription, order, and notification include first consumer contract tests using recorded examples. Seller/catalog/inventory outbox persistence and Kafka publishing remain deferred until consumers need those events at runtime. Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
 
 ## Data Ownership
 
 Each service owns its database and should be the only writer to its own schema. Cross-service data sharing should happen through APIs or events, not direct database joins.
 
 Local Compose creates all service databases from `infra/postgres/init.sql`.
-Service-local Flyway migrations stored in each service's `src/main/resources/db/migration` directory now own schema creation and evolution. Hibernate validates mapped schemas instead of creating or updating production tables.
+Service-local Flyway migrations stored in each service's `src/main/resources/db/migration` directory now own schema creation and evolution. Auth, seller, catalog, and inventory have real domain tables; customer, subscription, order, and notification currently have placeholder `select 1` migrations. Hibernate validates mapped schemas instead of creating or updating production tables.
 CI validates every service migration set against a disposable PostgreSQL database through the Flyway Maven plugin. Deployments run pinned Flyway Compose runners before app rollout, and services still run startup migrations as a safety net.
 
 ## Deployment Architecture

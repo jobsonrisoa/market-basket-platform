@@ -14,6 +14,7 @@ Common service dependencies:
 - Alertmanager: routes Prometheus alerts through `infra/alertmanager/alertmanager.yml`.
 - Grafana: provisioned with a Prometheus datasource and market service/infrastructure dashboards.
 - Sentry: optional error and tracing sink configured by environment variables.
+- SonarQube: local code-quality service for manual analysis; not part of runtime serving.
 
 Observability environment variables:
 
@@ -76,6 +77,7 @@ curl http://localhost:8100/status
 curl http://localhost:9090/-/ready
 curl http://localhost:9090/api/v1/targets
 curl http://localhost:9093/-/ready
+curl http://localhost:9000/api/system/status
 ```
 
 ## Dashboards
@@ -130,6 +132,10 @@ docker compose up -d --force-recreate auth-service customer-service seller-servi
 ```
 
 Keep `SENTRY_TRACES_SAMPLE_RATE` low in production until baseline traffic and cost are understood.
+
+## Code Quality
+
+Local Compose includes SonarQube Community Edition at `http://localhost:9000`. The checked-in `sonar-project.properties` currently focuses on auth-service analysis and coverage report paths. Treat SonarQube as a developer quality tool, not a production dependency.
 
 ## Logs
 

@@ -1,6 +1,6 @@
 # API Reference
 
-This document covers the endpoints currently implemented in the repository. Most non-auth services are scaffolds and expose only framework and Actuator behavior until domain controllers are added.
+This document covers the endpoints currently implemented in the repository. Auth, seller, catalog, and inventory have domain controllers. Customer, subscription, order, and notification currently expose only framework and Actuator behavior, plus contract-test groundwork where present.
 
 ## Auth Service
 
@@ -114,7 +114,7 @@ Response: `200 OK`
   "roles": ["CUSTOMER"],
   "permissions": ["CUSTOMER_PROFILE_ACCESS", "CUSTOMER_SUBSCRIPTION_MANAGE_OWN"],
   "accountProfile": "CUSTOMER",
-  "customerProfileType": "CUSTOMER"
+  "customerProfileType": "INDIVIDUAL"
 }
 ```
 
@@ -188,6 +188,15 @@ GET /.well-known/jwks.json
 Response: `200 OK`
 
 Returns public JSON Web Key Set data for validating auth-service-issued JWT access tokens.
+
+### Google OAuth2 Entry Points
+
+```http
+GET /oauth2/authorization/google
+GET /login/oauth2/code/google
+```
+
+These are provided by Spring Security OAuth2 client configuration and the auth-service success handler. They are public entry points for the Google login flow when Google client credentials are configured.
 
 ### Health
 
@@ -504,7 +513,7 @@ Changes the product status to `UNPUBLISHED`.
 
 Base URL in local Compose: `http://localhost:8085`
 
-Inventory APIs require `Authorization: Bearer <access-token>` with seller, admin, or service role.
+Inventory APIs require `Authorization: Bearer <access-token>` with `SELLER_OWNER`, `SELLER_STAFF`, `ADMIN`, `SUPER_ADMIN`, or `SERVICE` role. The auth service currently issues marketplace user/admin roles; `SERVICE` is accepted by inventory authorization for future service-to-service tokens but is not part of the current auth role model.
 Requests still carry explicit seller and product ids; catalog lookups and ownership checks are future refinements.
 
 ### Upsert Stock

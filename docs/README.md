@@ -2,11 +2,12 @@
 
 This directory is the source of truth for product, architecture, delivery, and operations documentation for Market Basket Platform.
 
-Current domain implementation is deepest in auth, with seller approval, catalog, and inventory foundations now implemented before the remaining commerce workflows are expanded.
+Current domain implementation is deepest in auth. Seller approval and memberships, catalog categories/products, and inventory stock/reservations are implemented as first domain foundations. Customer, subscription, order, and notification remain mostly bounded-context scaffolds, with some consumer contract tests already recording expected event inputs.
 
 ## Start Here
 
 - [Product requirements](prd.md): product goals, users, scope, non-goals, and release criteria.
+- [MVP backend epics](epics.md): backlog epics, stories, and acceptance criteria for the next backend implementation path.
 - [Architecture](architecture.md): service boundaries, infrastructure, data ownership, and security posture.
 - [Diagrams](diagrams.md): system context, containers, auth flow, CI/CD, and deployment diagrams.
 - [API reference](api.md): current HTTP endpoints and examples.
@@ -23,6 +24,10 @@ market-basket-platform
   docs                  Product, architecture, delivery, and operations docs
   infra/kong            Kong Gateway declarative configuration
   infra/postgres        Local database bootstrap SQL
+  infra/prometheus      Prometheus scrape and alert rules
+  infra/grafana         Provisioned datasource and dashboards
+  infra/alertmanager    Local alert routing config
+  scripts               Operational helper scripts such as migration runners
   services              Spring Boot services
     auth-service
     catalog-service

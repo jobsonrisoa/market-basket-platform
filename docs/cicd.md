@@ -41,7 +41,7 @@ For each service, the build job:
 6. Uploads Surefire reports.
 7. Uploads the built service jar.
 
-Application tests use Testcontainers for PostgreSQL, Redis, and Kafka. Since every service now uses Flyway and Hibernate validation, the package step also exercises startup-time migration behavior.
+Application tests use Testcontainers for PostgreSQL, Redis, and Kafka. Auth tests also cover JWT issuing and Kafka outbox publishing, while seller/catalog/inventory and selected downstream services include JSON Schema event contract tests. Since every service now uses Flyway and Hibernate validation, the package step also exercises startup-time migration behavior.
 
 ## Image Publishing
 
@@ -95,6 +95,8 @@ Dev deploys automatically after the Docker Images workflow succeeds on `main`. P
 
 Deployment smoke checks now verify container state, auth health, auth JWKS through Kong, Prometheus readiness, Prometheus target discovery, and Alertmanager readiness. Prometheus scrapes application Actuator metrics, Kong, PostgreSQL, Redis, and Kafka exporters from the deployed Compose network.
 
+Local SonarQube is available in Compose for manual quality analysis, but there is no GitHub Actions Sonar gate yet.
+
 ## Required Secrets
 
 Configure these secrets in each GitHub environment that deploys:
@@ -128,3 +130,4 @@ Deployments use the `IMAGE_TAG` environment variable, so rollback means redeploy
 - Add a root script or parent build to run all service checks locally with one command.
 - Add dependency vulnerability scanning.
 - Add Docker image scanning.
+- Add a SonarQube or hosted code-quality gate once the project decides whether to analyze every service or only production-depth services.
