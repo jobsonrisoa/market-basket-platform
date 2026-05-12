@@ -2,14 +2,14 @@
 
 This directory is the source of truth for product, architecture, delivery, and operations documentation for Market Basket Platform.
 
-Current domain implementation is deepest in auth. Seller approval and memberships, catalog categories/products, and inventory stock/reservations are implemented as first domain foundations. Customer, subscription, order, and notification remain mostly bounded-context scaffolds, with some consumer contract tests already recording expected event inputs.
+Current domain implementation is deepest in auth. Seller approval and memberships, seller-owned catalog categories/products, inventory stock/reservations, and first-pass seller ownership authorization are implemented as domain foundations. Customer, subscription, order, and notification remain mostly bounded-context scaffolds, with some consumer contract tests already recording expected event inputs.
 
 ## Start Here
 
 - [Product requirements](prd.md): product goals, users, scope, non-goals, and release criteria.
 - [MVP backend epics](epics.md): backlog epics, stories, and acceptance criteria for the next backend implementation path.
 - [Architecture](architecture.md): service boundaries, infrastructure, data ownership, and security posture.
-- [Diagrams](diagrams.md): system context, containers, auth flow, CI/CD, and deployment diagrams.
+- [Diagrams](diagrams.md): system context, containers, auth and ownership flows, CI/CD, and deployment diagrams.
 - [API reference](api.md): current HTTP endpoints and examples.
 - [Local development](local-development.md): how to run, test, format, and troubleshoot locally.
 - [CI/CD flow](cicd.md): GitHub Actions migration validation, build jobs, environments, secrets, images, and rollback notes.

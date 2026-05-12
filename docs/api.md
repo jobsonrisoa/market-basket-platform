@@ -245,15 +245,14 @@ Request:
 
 ```json
 {
-  "name": "Fresh Market",
-  "ownerUserId": "user-uuid"
+  "name": "Fresh Market"
 }
 ```
 
 Response: `201 Created`
 
-Creates a seller store and an active `OWNER` membership for the owner user.
-The owner user is the authenticated JWT subject, not the request-body `ownerUserId`.
+Creates a seller store and an active `OWNER` membership for the authenticated JWT subject.
+`ownerUserId` may still be accepted temporarily for backward compatibility but is ignored.
 
 ### Get Seller
 
@@ -279,7 +278,6 @@ Request:
 
 ```json
 {
-  "reviewerUserId": "admin-user-uuid",
   "reviewNotes": "Ready for marketplace"
 }
 ```
@@ -288,7 +286,8 @@ Response: `200 OK`
 
 Marks the seller store as `APPROVED`. Seller-service also has a JSON Schema producer contract for
 `seller.approved.v1`; runtime Kafka publishing is deferred.
-The reviewer user is the authenticated JWT subject, not the request-body `reviewerUserId`.
+The reviewer user is the authenticated JWT subject. `reviewerUserId` may still be accepted
+temporarily for backward compatibility but is ignored.
 
 ### Reject Seller
 
@@ -302,14 +301,13 @@ Request:
 
 ```json
 {
-  "reviewerUserId": "admin-user-uuid",
   "reviewNotes": "Missing license"
 }
 ```
 
 Response: `200 OK`
 
-Marks the seller store as `REJECTED` with reviewer metadata.
+Marks the seller store as `REJECTED` with reviewer metadata from the authenticated JWT subject.
 
 ### Add Seller Member
 
@@ -371,6 +369,9 @@ Seller membership claims are expected in JWTs for seller-scoped catalog writes:
   ]
 }
 ```
+
+`role` is currently advisory for downstream services; authorization requires a matching `sellerId`
+with `status` equal to `ACTIVE`. Seller-service remains the source of truth for membership records.
 
 ### Create Category
 

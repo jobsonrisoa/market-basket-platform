@@ -4,9 +4,11 @@ This backlog turns the remaining MVP backend work described across the documenta
 
 ## Epic 1: Authorization Ownership Enforcement
 
+Status: implemented.
+
 Goal: ensure seller, catalog, and inventory actions are authorized by both JWT role/permission claims and resource ownership, not by broad role checks alone.
 
-Current state: seller, catalog, and inventory validate auth-service JWTs and gate protected APIs by role. Requests still carry explicit user, seller, and product identifiers, and ownership checks against seller memberships are documented as a future refinement.
+Current state: seller, catalog, and inventory validate auth-service JWTs and gate protected APIs by role. Seller-service enforces store ownership against its membership table and replaces spoofable actor IDs with the JWT subject. Catalog and inventory write paths require platform/service roles or an active `seller_memberships` JWT claim for the target seller. Explicit seller, product, and member IDs remain only where they identify target resources.
 
 Primary services touched: `seller-service`, `catalog-service`, `inventory-service`, `auth-service` for token claim compatibility only.
 
@@ -36,6 +38,13 @@ Event/API/test expectations:
 - No new event type is required for this epic.
 - Existing API paths should be preserved unless removing explicit actor IDs requires a backward-incompatible request change.
 - Tests must prove JWT subject, roles, permissions, seller membership, and membership status are all considered.
+
+Implemented notes:
+
+- Seller store creation, review, store reads, and membership management use the authenticated JWT subject as the actor.
+- Seller membership management requires an active seller `OWNER` membership or platform admin role.
+- Catalog product create, update, publish, and unpublish require platform admin role or an active seller membership claim for the product seller.
+- Inventory stock and reservation reads/writes require platform admin/service role or an active seller membership claim for the stock seller.
 
 ## Epic 2: Customer Profile Foundation
 

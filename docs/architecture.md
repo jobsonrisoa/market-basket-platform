@@ -86,6 +86,16 @@ Persistence entities include:
 - Kong currently routes `/auth/**` and `/.well-known/jwks.json` to auth-service. The Spring OAuth2 entry points exist on auth-service and still need Kong routes before gateway-only OAuth login is expected to work.
 - Seller-service, catalog-service, and inventory-service validate auth-service JWTs through JWKS, issuer, and audience checks, then map `roles` to `ROLE_*` authorities and `permissions` to direct authorities. Public catalog reads remain open. Seller-service enforces ownership against its membership table. Catalog and inventory write paths require platform/service roles or active `seller_memberships` JWT claims for the target seller.
 
+## Ownership Authorization
+
+Seller ownership authorization is enforced at the service boundary after JWT validation:
+
+- Seller-service is the source of truth for seller memberships. Store reads require an active seller membership or platform admin role, while membership management requires an active seller `OWNER` membership or platform admin role.
+- Seller store creation and platform review operations use the JWT subject as the actor user id. Request-body actor ids are ignored when present for backward compatibility.
+- Catalog-service keeps public read endpoints open, but product writes require `ADMIN`/`SUPER_ADMIN` or an active `seller_memberships` JWT claim matching the product seller.
+- Inventory-service requires `ADMIN`, `SUPER_ADMIN`, `SERVICE`, or an active `seller_memberships` JWT claim matching the stock seller for stock and reservation access.
+- Downstream `seller_memberships` claims are a compatibility contract with auth-issued tokens; seller-service remains the authoritative membership store.
+
 ## Eventing
 
 The auth service has an outbox persistence model and Kafka publisher. This allows domain events to be stored transactionally with state changes and published after commit. Current implemented auth event names include:

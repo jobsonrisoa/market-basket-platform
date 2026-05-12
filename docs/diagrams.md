@@ -158,6 +158,34 @@ sequenceDiagram
   AuthController-->>Client: 200 OK plus rotated refresh_token cookie
 ```
 
+## Ownership Authorization Flow
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant Service as Seller/Catalog/Inventory Service
+  participant JwtDecoder as JWKS JWT Decoder
+  participant SellerDb as Seller Membership Store
+  participant Domain as Domain Use Case
+
+  Client->>Service: Protected write request plus bearer JWT
+  Service->>JwtDecoder: Validate issuer, audience, signature
+  JwtDecoder-->>Service: Subject, roles, permissions, seller_memberships
+
+  alt ADMIN or SUPER_ADMIN
+    Service->>Domain: Allow platform action
+  else seller-service membership operation
+    Service->>SellerDb: Load membership by sellerId and JWT subject
+    SellerDb-->>Service: Membership role and status
+    Service->>Domain: Allow only active OWNER membership
+  else catalog/inventory seller-scoped operation
+    Service->>Service: Match target sellerId to active seller_memberships claim
+    Service->>Domain: Allow active matching seller membership
+  else no active ownership
+    Service-->>Client: 403 Forbidden
+  end
+```
+
 ## CI/CD Flow
 
 ```mermaid

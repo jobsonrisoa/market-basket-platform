@@ -4,7 +4,7 @@
 
 Market Basket Platform is a backend platform for a grocery subscription marketplace. It is designed as a set of independently deployable Spring Boot services with clear bounded contexts for identity, customers, sellers, catalog, subscriptions, orders, inventory, and notifications.
 
-The implemented foundation now covers authentication plus the first seller, catalog, and inventory slices: users can register, log in, receive JWT access tokens, rotate refresh tokens, log out, and authenticate downstream requests through published JWKS keys; sellers can be created and reviewed; products can be managed and published; and inventory can be stocked and reserved.
+The implemented foundation now covers authentication plus the first seller, catalog, and inventory slices: users can register, log in, receive JWT access tokens, rotate refresh tokens, log out, and authenticate downstream requests through published JWKS keys; sellers can be created and reviewed with membership-scoped access; products can be managed and published with seller ownership checks; and inventory can be stocked and reserved with seller ownership checks.
 
 ## Target Users
 
@@ -90,6 +90,7 @@ The implemented foundation now covers authentication plus the first seller, cata
 | Platform | Deploy dev after successful image publishing. | Implemented through GitHub Actions. |
 | Platform | Deploy dev and prod with explicit image tags and smoke checks. | Implemented through GitHub Actions. |
 | Platform | Validate auth-service JWTs in downstream business services. | Implemented first in seller, catalog, and inventory services with role gates and issuer/audience validation. |
+| Platform | Enforce seller ownership for protected seller, catalog, and inventory operations. | Implemented in seller, catalog, and inventory services. |
 | Platform | Expose local observability and quality tools. | Implemented with Prometheus, Alertmanager, Grafana dashboards, exporters, Sentry wiring, and local SonarQube. |
 
 ## Non-Functional Requirements
