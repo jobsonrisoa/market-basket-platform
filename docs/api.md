@@ -1,6 +1,8 @@
 # API Reference
 
-This document covers the endpoints currently implemented in the repository. Auth, customer, seller, catalog, and inventory have domain controllers. Subscription, order, and notification currently expose only framework and Actuator behavior, plus contract-test groundwork where present.
+This document covers the endpoints currently implemented in the repository. Auth, customer, seller,
+catalog, inventory, subscription, and order have domain controllers. Notification currently exposes
+framework and Actuator behavior, plus consumer contract-test groundwork.
 
 ## Auth Service
 
@@ -784,3 +786,164 @@ Response: `200 OK`
 Applies a forward-only on-hand correction. The adjustment may not make on-hand quantity negative or
 lower than currently reserved quantity. Inventory-service has a JSON Schema producer contract for
 `inventory.stock_adjusted.v1`; runtime Kafka publishing is deferred.
+
+## Subscription Service
+
+Base URL in local Compose: `http://localhost:8083`
+
+Subscription APIs currently model the MVP workflow and do not enforce end-user JWT ownership yet.
+Client calls must pass the target `customerId` explicitly until service auth is wired into this
+service.
+
+### Create Subscription
+
+```http
+POST /subscriptions
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "customerId": "customer-uuid",
+  "sellerId": "seller-uuid",
+  "productId": "product-uuid",
+  "stockId": "stock-uuid",
+  "basketSize": "SMALL",
+  "cadence": "WEEKLY",
+  "quantity": 2.5,
+  "unit": "kg",
+  "nextRenewalDate": "2026-05-20"
+}
+```
+
+Response: `201 Created`
+
+Creates an `ACTIVE` customer subscription, stores a generated `currentDraftOrderId`, and publishes
+`subscription.renewal_due.v1` for the first draft-order workflow.
+
+### List Customer Subscriptions
+
+```http
+GET /subscriptions?customerId={customerId}
+```
+
+Response: `200 OK`
+
+Returns subscriptions owned by the customer.
+
+### Pause, Resume, Skip, And Cancel
+
+```http
+POST /subscriptions/{subscriptionId}/pause?customerId={customerId}
+POST /subscriptions/{subscriptionId}/resume?customerId={customerId}
+POST /subscriptions/{subscriptionId}/skip?customerId={customerId}
+POST /subscriptions/{subscriptionId}/cancel?customerId={customerId}
+```
+
+Response: `200 OK`
+
+Pause and resume toggle between `ACTIVE` and `PAUSED`. Skip advances `nextRenewalDate` by the
+subscription cadence. Cancel marks the subscription `CANCELLED`.
+
+### Renew Due Subscriptions
+
+```http
+POST /subscriptions/renewals/due?renewalDate=2026-05-20
+```
+
+Response: `200 OK`
+
+Command-driven renewal flow for MVP. It finds active subscriptions due on or before the supplied
+date, generates a new draft order id, advances the next renewal date, persists the subscription, and
+publishes `subscription.renewal_due.v1`.
+
+## Order Service
+
+Base URL in local Compose: `http://localhost:8084`
+
+Order APIs currently model the MVP workflow and do not enforce end-user JWT ownership yet.
+
+### Create Draft Order
+
+```http
+POST /orders
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "customerId": "customer-uuid",
+  "sellerId": "seller-uuid",
+  "productId": "product-uuid",
+  "stockId": "stock-uuid",
+  "quantity": 2.5,
+  "unit": "kg",
+  "source": "subscription-service",
+  "sourceReferenceId": "subscription-uuid"
+}
+```
+
+Response: `201 Created`
+
+Creates a `DRAFT` order. Subscription renewal events carry the draft order id used by consumers to
+correlate the first order workflow.
+
+### Get And List Orders
+
+```http
+GET /orders/{orderId}
+GET /orders?customerId={customerId}
+```
+
+Response: `200 OK`
+
+Returns one order or all orders for the customer.
+
+### Confirm Order
+
+```http
+POST /orders/{orderId}/confirm
+```
+
+Response: `200 OK`
+
+Requests inventory reservation through `POST /inventory/reservations` using `order-service` and the
+order id as the idempotency reference. On success, the order moves to `CONFIRMED` and publishes
+`order.confirmed.v1`. On reservation failure, the order moves to `FAILED` and the API returns
+`409 Conflict`.
+
+### Cancel Order
+
+```http
+POST /orders/{orderId}/cancel
+```
+
+Response: `200 OK`
+
+Moves cancellable orders to `CANCELLED`. Confirmed or fulfillment-ready orders also request
+inventory release through `POST /inventory/reservations/release`.
+
+### Change Fulfillment Status
+
+```http
+PATCH /orders/{orderId}/fulfillment
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "status": "FULFILLMENT_READY"
+}
+```
+
+Response: `200 OK`
+
+Persists the fulfillment transition. `FULFILLMENT_READY`, `FULFILLED`, and `FAILED` update the
+order status to match the fulfillment state and publish
+`order.fulfillment_status_changed.v1`.

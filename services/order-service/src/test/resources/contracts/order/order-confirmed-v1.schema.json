@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "order.confirmed.v1",
+  "type": "object",
+  "required": ["eventId", "eventType", "version", "occurredAt", "correlationId", "payload"],
+  "properties": {
+    "eventType": { "const": "order.confirmed.v1" },
+    "version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["orderId", "customerId", "sellerId", "productId", "stockId", "quantity", "unit", "status", "fulfillmentStatus", "confirmedAt"],
+      "properties": {
+        "orderId": { "type": "string", "format": "uuid" },
+        "customerId": { "type": "string", "format": "uuid" },
+        "sellerId": { "type": "string", "format": "uuid" },
+        "productId": { "type": "string", "format": "uuid" },
+        "stockId": { "type": "string", "format": "uuid" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "status": { "const": "CONFIRMED" },
+        "fulfillmentStatus": { "const": "CONFIRMED" },
+        "confirmedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

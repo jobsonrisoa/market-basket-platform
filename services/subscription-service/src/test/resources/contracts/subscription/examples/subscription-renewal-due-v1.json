@@ -1,0 +1,21 @@
+{
+  "eventId": "a4e1e83d-5d17-42bd-9469-849305c145d0",
+  "eventType": "subscription.renewal_due.v1",
+  "version": 1,
+  "occurredAt": "2026-05-13T12:00:00Z",
+  "correlationId": "c7de83a2-a8d4-4ac5-89e0-d79d55d9af10",
+  "payload": {
+    "subscriptionId": "c7de83a2-a8d4-4ac5-89e0-d79d55d9af10",
+    "customerId": "d397c6ff-0a8f-47fc-a30a-a5c802a10019",
+    "sellerId": "2f23681e-8e7f-4819-a7dd-ef4f88522921",
+    "productId": "8f0e49b2-7a28-438f-8a99-b282faef942d",
+    "stockId": "3867f8b0-fc23-4144-97e3-6edfc58697b6",
+    "draftOrderId": "fb44923e-8936-48e9-90cb-9fd55ae0ca8a",
+    "basketSize": "SMALL",
+    "cadence": "WEEKLY",
+    "quantity": 2.5,
+    "unit": "kg",
+    "nextRenewalDate": "2026-05-20",
+    "status": "ACTIVE"
+  }
+}

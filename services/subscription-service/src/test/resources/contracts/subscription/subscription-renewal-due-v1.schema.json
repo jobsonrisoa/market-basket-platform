@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "subscription.renewal_due.v1",
+  "type": "object",
+  "required": ["eventId", "eventType", "version", "occurredAt", "correlationId", "payload"],
+  "properties": {
+    "eventType": { "const": "subscription.renewal_due.v1" },
+    "version": { "const": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["subscriptionId", "customerId", "sellerId", "productId", "stockId", "draftOrderId", "basketSize", "cadence", "quantity", "unit", "nextRenewalDate", "status"],
+      "properties": {
+        "subscriptionId": { "type": "string", "format": "uuid" },
+        "customerId": { "type": "string", "format": "uuid" },
+        "sellerId": { "type": "string", "format": "uuid" },
+        "productId": { "type": "string", "format": "uuid" },
+        "stockId": { "type": "string", "format": "uuid" },
+        "draftOrderId": { "type": "string", "format": "uuid" },
+        "basketSize": { "type": "string" },
+        "cadence": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "nextRenewalDate": { "type": "string", "format": "date" },
+        "status": { "const": "ACTIVE" }
+      }
+    }
+  }
+}

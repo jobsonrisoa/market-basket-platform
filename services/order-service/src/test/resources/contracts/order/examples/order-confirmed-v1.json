@@ -1,0 +1,20 @@
+{
+  "eventId": "ec3140c4-3d7f-493b-a1d5-902f9ae163b5",
+  "eventType": "order.confirmed.v1",
+  "version": 1,
+  "occurredAt": "2026-05-13T12:05:00Z",
+  "correlationId": "fb44923e-8936-48e9-90cb-9fd55ae0ca8a",
+  "payload": {
+    "orderId": "fb44923e-8936-48e9-90cb-9fd55ae0ca8a",
+    "customerId": "d397c6ff-0a8f-47fc-a30a-a5c802a10019",
+    "sellerId": "2f23681e-8e7f-4819-a7dd-ef4f88522921",
+    "productId": "8f0e49b2-7a28-438f-8a99-b282faef942d",
+    "stockId": "3867f8b0-fc23-4144-97e3-6edfc58697b6",
+    "quantity": 2.5,
+    "unit": "kg",
+    "status": "CONFIRMED",
+    "fulfillmentStatus": "CONFIRMED",
+    "confirmedAt": "2026-05-13T12:05:00Z",
+    "fulfilledAt": null
+  }
+}
