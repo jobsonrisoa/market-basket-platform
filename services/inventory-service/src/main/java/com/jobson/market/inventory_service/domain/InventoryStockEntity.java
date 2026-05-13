@@ -106,6 +106,33 @@ public class InventoryStockEntity {
     this.updatedAt = updatedAt;
   }
 
+  public void commit(BigDecimal quantity, Instant updatedAt) {
+    BigDecimal requiredQuantity = requirePositive(quantity);
+    requireTimestamp(updatedAt, "Updated timestamp is required");
+    if (reservedQuantity.compareTo(requiredQuantity) < 0) {
+      throw new IllegalArgumentException("Cannot commit more than reserved quantity");
+    }
+    this.reservedQuantity = reservedQuantity.subtract(requiredQuantity);
+    this.onHandQuantity = onHandQuantity.subtract(requiredQuantity);
+    this.updatedAt = updatedAt;
+  }
+
+  public void adjustOnHand(BigDecimal quantityDelta, Instant updatedAt) {
+    if (quantityDelta == null || quantityDelta.compareTo(BigDecimal.ZERO) == 0) {
+      throw new IllegalArgumentException("Adjustment quantity delta is required");
+    }
+    requireTimestamp(updatedAt, "Updated timestamp is required");
+    BigDecimal adjusted = onHandQuantity.add(quantityDelta);
+    if (adjusted.compareTo(BigDecimal.ZERO) < 0) {
+      throw new IllegalArgumentException("On-hand quantity cannot be negative");
+    }
+    if (adjusted.compareTo(reservedQuantity) < 0) {
+      throw new IllegalArgumentException("On-hand quantity cannot be below reserved quantity");
+    }
+    this.onHandQuantity = adjusted;
+    this.updatedAt = updatedAt;
+  }
+
   public UUID id() {
     return id;
   }

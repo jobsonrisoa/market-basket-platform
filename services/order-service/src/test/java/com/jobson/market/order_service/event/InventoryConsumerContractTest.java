@@ -61,7 +61,17 @@ class InventoryConsumerContractTest {
             "inventory.reservation_released.v1",
             Path.of(
                 "../inventory-service/src/test/resources/contracts/inventory/examples/reservation-released-v1.json"),
-            payload -> requireText(payload, "releasedAt")));
+            payload -> requireText(payload, "releasedAt")),
+        new Contract(
+            "inventory.reservation_expired.v1",
+            Path.of(
+                "../inventory-service/src/test/resources/contracts/inventory/examples/reservation-expired-v1.json"),
+            payload -> requireText(payload, "expiredAt")),
+        new Contract(
+            "inventory.reservation_committed.v1",
+            Path.of(
+                "../inventory-service/src/test/resources/contracts/inventory/examples/reservation-committed-v1.json"),
+            payload -> requireText(payload, "committedAt")));
   }
 
   private JsonNode read(Path example) throws Exception {

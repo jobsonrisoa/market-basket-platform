@@ -31,6 +31,12 @@ final class AuthenticatedSellerAccess {
     }
   }
 
+  static void requireSystemAccess(Authentication authentication) {
+    if (!hasAnyRole(authentication, "ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_SERVICE")) {
+      throw new AccessDeniedException("Platform or service role required");
+    }
+  }
+
   private static boolean hasAnyRole(Authentication authentication, String... roles) {
     for (String role : roles) {
       boolean found =

@@ -674,14 +674,17 @@ Request:
   "stockId": "stock-uuid",
   "quantity": 4.5,
   "requestedBy": "order-service",
-  "referenceId": "order-123"
+  "referenceId": "order-123",
+  "expiresAt": "2026-05-10T14:00:00Z"
 }
 ```
 
 Response: `201 Created`
 
-Creates an `ACTIVE` reservation and reduces available stock. Inventory-service has a JSON Schema
-producer contract for `inventory.stock_reserved.v1`; runtime Kafka publishing is deferred.
+Creates an `ACTIVE` reservation and reduces available stock. Repeating the same `stockId`,
+`requestedBy`, and `referenceId` returns the existing reservation without reserving stock again.
+`expiresAt` is optional. Inventory-service has a JSON Schema producer contract for
+`inventory.stock_reserved.v1`; runtime Kafka publishing is deferred.
 
 ### Release Reservation
 
@@ -695,3 +698,89 @@ Response: `200 OK`
 Marks an active reservation as `RELEASED` and returns its quantity to availability. Inventory-service
 has a JSON Schema producer contract for `inventory.reservation_released.v1`; runtime Kafka publishing
 is deferred.
+
+### Release Reservation By Reference
+
+```http
+POST /inventory/reservations/release
+Authorization: Bearer <access-token>
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "stockId": "stock-uuid",
+  "requestedBy": "order-service",
+  "referenceId": "order-123"
+}
+```
+
+Response: `200 OK`
+
+Idempotently releases the matching active reservation. Repeated calls return the terminal reservation
+without changing stock again.
+
+### Commit Reservation
+
+```http
+POST /inventory/reservations/commit
+Authorization: Bearer <access-token>
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "stockId": "stock-uuid",
+  "requestedBy": "order-service",
+  "referenceId": "order-123"
+}
+```
+
+Response: `200 OK`
+
+Idempotently marks an active reservation as `COMMITTED`, reduces reserved quantity, and reduces
+on-hand quantity exactly once. Inventory-service has a JSON Schema producer contract for
+`inventory.reservation_committed.v1`; runtime Kafka publishing is deferred.
+
+### Expire Reservations
+
+```http
+POST /inventory/reservations/expire
+Authorization: Bearer <access-token>
+```
+
+Response: `200 OK`
+
+Returns the reservations expired by the command. Active reservations whose `expiresAt` is at or
+before the service clock are marked `EXPIRED` and returned to availability exactly once.
+This command requires `SERVICE`, `ADMIN`, or `SUPER_ADMIN`.
+Inventory-service has a JSON Schema producer contract for `inventory.reservation_expired.v1`;
+runtime Kafka publishing is deferred.
+
+### Adjust Stock
+
+```http
+POST /inventory/stocks/{stockId}/adjustments
+Authorization: Bearer <access-token>
+Content-Type: application/json
+```
+
+Request:
+
+```json
+{
+  "quantityDelta": -2.5,
+  "reason": "shrinkage",
+  "referenceId": "cycle-count-1"
+}
+```
+
+Response: `200 OK`
+
+Applies a forward-only on-hand correction. The adjustment may not make on-hand quantity negative or
+lower than currently reserved quantity. Inventory-service has a JSON Schema producer contract for
+`inventory.stock_adjusted.v1`; runtime Kafka publishing is deferred.

@@ -106,6 +106,122 @@ class InventoryEventContractTest {
         new BigDecimal(envelope.at("/payload/availableQuantity").asText()));
   }
 
+  @Test
+  void shouldSerializeReservationExpiredEnvelopeThatMatchesConsumerContract() throws Exception {
+    InventoryStockEntity stock =
+        InventoryStockEntity.create(
+            SELLER_ID,
+            PRODUCT_ID,
+            new BigDecimal("10.00"),
+            "kg",
+            Instant.parse("2026-05-10T12:00:00Z"));
+    InventoryReservationEntity reservation =
+        InventoryReservationEntity.active(
+            stock,
+            new BigDecimal("3.50"),
+            "order-service",
+            "order-123",
+            Instant.parse("2026-05-10T13:00:00Z"),
+            Instant.parse("2026-05-10T13:30:00Z"));
+    reservation.expire(Instant.parse("2026-05-10T14:00:00Z"));
+    stock.release(reservation.quantity(), Instant.parse("2026-05-10T14:00:00Z"));
+
+    InventoryEvent event = InventoryEvent.reservationExpired(stock, reservation);
+    JsonNode envelope = objectMapper.valueToTree(event);
+    JsonNode schema =
+        objectMapper.readTree(
+            getClass()
+                .getResourceAsStream("/contracts/inventory/reservation-expired-v1.schema.json"));
+
+    assertEnvelopeMatchesSchema(envelope, schema, "inventory.reservation_expired.v1");
+    assertObjectHasOnlyFields(
+        envelope.path("payload"),
+        "stockId",
+        "reservationId",
+        "sellerId",
+        "productId",
+        "quantity",
+        "unit",
+        "availableQuantity",
+        "requestedBy",
+        "referenceId",
+        "expiredAt");
+  }
+
+  @Test
+  void shouldSerializeReservationCommittedEnvelopeThatMatchesConsumerContract() throws Exception {
+    InventoryStockEntity stock =
+        InventoryStockEntity.create(
+            SELLER_ID,
+            PRODUCT_ID,
+            new BigDecimal("10.00"),
+            "kg",
+            Instant.parse("2026-05-10T12:00:00Z"));
+    InventoryReservationEntity reservation =
+        InventoryReservationEntity.active(
+            stock,
+            new BigDecimal("3.50"),
+            "order-service",
+            "order-123",
+            Instant.parse("2026-05-10T13:00:00Z"));
+    reservation.commit(Instant.parse("2026-05-10T14:00:00Z"));
+    stock.commit(reservation.quantity(), Instant.parse("2026-05-10T14:00:00Z"));
+
+    InventoryEvent event = InventoryEvent.reservationCommitted(stock, reservation);
+    JsonNode envelope = objectMapper.valueToTree(event);
+    JsonNode schema =
+        objectMapper.readTree(
+            getClass()
+                .getResourceAsStream("/contracts/inventory/reservation-committed-v1.schema.json"));
+
+    assertEnvelopeMatchesSchema(envelope, schema, "inventory.reservation_committed.v1");
+    assertObjectHasOnlyFields(
+        envelope.path("payload"),
+        "stockId",
+        "reservationId",
+        "sellerId",
+        "productId",
+        "quantity",
+        "unit",
+        "onHandQuantity",
+        "availableQuantity",
+        "requestedBy",
+        "referenceId",
+        "committedAt");
+  }
+
+  @Test
+  void shouldSerializeStockAdjustedEnvelopeThatMatchesConsumerContract() throws Exception {
+    InventoryStockEntity stock =
+        InventoryStockEntity.create(
+            SELLER_ID,
+            PRODUCT_ID,
+            new BigDecimal("10.00"),
+            "kg",
+            Instant.parse("2026-05-10T12:00:00Z"));
+    stock.adjustOnHand(new BigDecimal("-1.25"), Instant.parse("2026-05-10T14:00:00Z"));
+
+    InventoryEvent event =
+        InventoryEvent.stockAdjusted(stock, new BigDecimal("-1.25"), "shrinkage", "cycle-count-1");
+    JsonNode envelope = objectMapper.valueToTree(event);
+    JsonNode schema =
+        objectMapper.readTree(
+            getClass().getResourceAsStream("/contracts/inventory/stock-adjusted-v1.schema.json"));
+
+    assertEnvelopeMatchesSchema(envelope, schema, "inventory.stock_adjusted.v1");
+    assertObjectHasOnlyFields(
+        envelope.path("payload"),
+        "stockId",
+        "sellerId",
+        "productId",
+        "quantityDelta",
+        "unit",
+        "onHandQuantity",
+        "availableQuantity",
+        "reason",
+        "referenceId");
+  }
+
   private void assertEnvelopeMatchesSchema(JsonNode envelope, JsonNode schema, String eventType) {
     assertEquals(eventType, envelope.path("eventType").stringValue());
     assertEquals(schema.path("title").stringValue(), envelope.path("eventType").stringValue());

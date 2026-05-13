@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://market-basket-platform/contracts/inventory/reservation-committed-v1.schema.json",
+  "title": "inventory.reservation_committed.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "version", "occurredAt", "correlationId", "payload"],
+  "properties": {
+    "eventId": {"type": "string", "format": "uuid"},
+    "eventType": {"const": "inventory.reservation_committed.v1"},
+    "version": {"const": 1},
+    "occurredAt": {"type": "string", "format": "date-time"},
+    "correlationId": {"type": "string", "minLength": 1},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stockId",
+        "reservationId",
+        "sellerId",
+        "productId",
+        "quantity",
+        "unit",
+        "onHandQuantity",
+        "availableQuantity",
+        "requestedBy",
+        "referenceId",
+        "committedAt"
+      ],
+      "properties": {
+        "stockId": {"type": "string", "format": "uuid"},
+        "reservationId": {"type": "string", "format": "uuid"},
+        "sellerId": {"type": "string", "format": "uuid"},
+        "productId": {"type": "string", "format": "uuid"},
+        "quantity": {"type": "number", "exclusiveMinimum": 0},
+        "unit": {"type": "string", "minLength": 1},
+        "onHandQuantity": {"type": "number", "minimum": 0},
+        "availableQuantity": {"type": "number", "minimum": 0},
+        "requestedBy": {"type": "string", "minLength": 1},
+        "referenceId": {"type": "string", "minLength": 1},
+        "committedAt": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

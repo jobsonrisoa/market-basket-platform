@@ -46,6 +46,12 @@ public class InventoryReservationEntity {
 
   @Column private Instant releasedAt;
 
+  @Column private Instant expiresAt;
+
+  @Column private Instant expiredAt;
+
+  @Column private Instant committedAt;
+
   protected InventoryReservationEntity() {}
 
   private InventoryReservationEntity(
@@ -58,7 +64,8 @@ public class InventoryReservationEntity {
       String requestedBy,
       String referenceId,
       InventoryReservationStatus status,
-      Instant createdAt) {
+      Instant createdAt,
+      Instant expiresAt) {
     this.id = id;
     this.stockId = stockId;
     this.sellerId = sellerId;
@@ -69,6 +76,7 @@ public class InventoryReservationEntity {
     this.referenceId = referenceId;
     this.status = status;
     this.createdAt = createdAt;
+    this.expiresAt = expiresAt;
   }
 
   public static InventoryReservationEntity active(
@@ -76,7 +84,8 @@ public class InventoryReservationEntity {
       BigDecimal quantity,
       String requestedBy,
       String referenceId,
-      Instant createdAt) {
+      Instant createdAt,
+      Instant expiresAt) {
     if (stock == null) {
       throw new IllegalArgumentException("Stock is required");
     }
@@ -97,7 +106,17 @@ public class InventoryReservationEntity {
         requiredRequestedBy,
         requiredReferenceId,
         InventoryReservationStatus.ACTIVE,
-        createdAt);
+        createdAt,
+        expiresAt);
+  }
+
+  public static InventoryReservationEntity active(
+      InventoryStockEntity stock,
+      BigDecimal quantity,
+      String requestedBy,
+      String referenceId,
+      Instant createdAt) {
+    return active(stock, quantity, requestedBy, referenceId, createdAt, null);
   }
 
   public void release(Instant releasedAt) {
@@ -106,6 +125,22 @@ public class InventoryReservationEntity {
     }
     this.status = InventoryReservationStatus.RELEASED;
     this.releasedAt = releasedAt;
+  }
+
+  public void expire(Instant expiredAt) {
+    if (expiredAt == null) {
+      throw new IllegalArgumentException("Expired timestamp is required");
+    }
+    this.status = InventoryReservationStatus.EXPIRED;
+    this.expiredAt = expiredAt;
+  }
+
+  public void commit(Instant committedAt) {
+    if (committedAt == null) {
+      throw new IllegalArgumentException("Committed timestamp is required");
+    }
+    this.status = InventoryReservationStatus.COMMITTED;
+    this.committedAt = committedAt;
   }
 
   public UUID id() {
@@ -150,6 +185,18 @@ public class InventoryReservationEntity {
 
   public Instant releasedAt() {
     return releasedAt;
+  }
+
+  public Instant expiresAt() {
+    return expiresAt;
+  }
+
+  public Instant expiredAt() {
+    return expiredAt;
+  }
+
+  public Instant committedAt() {
+    return committedAt;
   }
 
   private static BigDecimal requirePositive(BigDecimal quantity) {

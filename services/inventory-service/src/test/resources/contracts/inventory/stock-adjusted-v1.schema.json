@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://market-basket-platform/contracts/inventory/stock-adjusted-v1.schema.json",
+  "title": "inventory.stock_adjusted.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "version", "occurredAt", "correlationId", "payload"],
+  "properties": {
+    "eventId": {"type": "string", "format": "uuid"},
+    "eventType": {"const": "inventory.stock_adjusted.v1"},
+    "version": {"const": 1},
+    "occurredAt": {"type": "string", "format": "date-time"},
+    "correlationId": {"type": "string", "minLength": 1},
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stockId",
+        "sellerId",
+        "productId",
+        "quantityDelta",
+        "unit",
+        "onHandQuantity",
+        "availableQuantity",
+        "reason",
+        "referenceId"
+      ],
+      "properties": {
+        "stockId": {"type": "string", "format": "uuid"},
+        "sellerId": {"type": "string", "format": "uuid"},
+        "productId": {"type": "string", "format": "uuid"},
+        "quantityDelta": {"type": "number"},
+        "unit": {"type": "string", "minLength": 1},
+        "onHandQuantity": {"type": "number", "minimum": 0},
+        "availableQuantity": {"type": "number", "minimum": 0},
+        "reason": {"type": "string", "minLength": 1},
+        "referenceId": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

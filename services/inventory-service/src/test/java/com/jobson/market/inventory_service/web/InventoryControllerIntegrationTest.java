@@ -126,6 +126,165 @@ class InventoryControllerIntegrationTest {
   }
 
   @Test
+  void shouldKeepReservationCommandsIdempotentByReference() throws Exception {
+    UUID sellerId = UUID.randomUUID();
+    UUID productId = UUID.randomUUID();
+    String stockId =
+        upsertStock(sellerId, productId, sellerJwtFor(sellerId, "ACTIVE")).path("id").stringValue();
+
+    String reservationJson =
+        """
+        {
+          "stockId":"%s",
+          "quantity":4.5,
+          "requestedBy":"order-service",
+          "referenceId":"order-456",
+          "expiresAt":"2026-05-10T14:00:00Z"
+        }
+        """
+            .formatted(stockId);
+
+    MvcResult firstReservation =
+        mvc.perform(
+                post("/inventory/reservations")
+                    .with(serviceJwt())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(reservationJson))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.status").value("ACTIVE"))
+            .andExpect(jsonPath("$.expiresAt").value("2026-05-10T14:00:00Z"))
+            .andReturn();
+
+    JsonNode firstReservationJson =
+        objectMapper.readTree(firstReservation.getResponse().getContentAsString());
+
+    mvc.perform(
+            post("/inventory/reservations")
+                .with(serviceJwt())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(reservationJson))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.id").value(firstReservationJson.path("id").stringValue()));
+
+    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwtFor(sellerId, "ACTIVE")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.reservedQuantity").value(4.5))
+        .andExpect(jsonPath("$.availableQuantity").value(21.0));
+
+    String commandJson =
+        """
+        {
+          "stockId":"%s",
+          "requestedBy":"order-service",
+          "referenceId":"order-456"
+        }
+        """
+            .formatted(stockId);
+
+    mvc.perform(
+            post("/inventory/reservations/commit")
+                .with(serviceJwt())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(commandJson))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("COMMITTED"));
+
+    mvc.perform(
+            post("/inventory/reservations/commit")
+                .with(serviceJwt())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(commandJson))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("COMMITTED"));
+
+    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwtFor(sellerId, "ACTIVE")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.onHandQuantity").value(21.0))
+        .andExpect(jsonPath("$.reservedQuantity").value(0))
+        .andExpect(jsonPath("$.availableQuantity").value(21.0));
+  }
+
+  @Test
+  void shouldExpireActiveReservationsAndReleaseAvailabilityOnce() throws Exception {
+    UUID sellerId = UUID.randomUUID();
+    UUID productId = UUID.randomUUID();
+    String stockId =
+        upsertStock(sellerId, productId, sellerJwtFor(sellerId, "ACTIVE")).path("id").stringValue();
+
+    mvc.perform(
+            post("/inventory/reservations")
+                .with(serviceJwt())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "stockId":"%s",
+                      "quantity":4.5,
+                      "requestedBy":"order-service",
+                      "referenceId":"order-expired",
+                      "expiresAt":"2020-05-10T14:00:00Z"
+                    }
+                    """
+                        .formatted(stockId)))
+        .andExpect(status().isCreated());
+
+    mvc.perform(post("/inventory/reservations/expire").with(serviceJwt()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)))
+        .andExpect(jsonPath("$[0].status").value("EXPIRED"))
+        .andExpect(jsonPath("$[0].expiredAt").exists());
+
+    mvc.perform(post("/inventory/reservations/expire").with(serviceJwt()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(0)));
+
+    mvc.perform(get("/inventory/stocks/{stockId}", stockId).with(sellerJwtFor(sellerId, "ACTIVE")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.reservedQuantity").value(0))
+        .andExpect(jsonPath("$.availableQuantity").value(25.5));
+  }
+
+  @Test
+  void shouldRejectInsufficientStockAndApplyForwardOnlyAdjustments() throws Exception {
+    UUID sellerId = UUID.randomUUID();
+    UUID productId = UUID.randomUUID();
+    String stockId =
+        upsertStock(sellerId, productId, sellerJwtFor(sellerId, "ACTIVE")).path("id").stringValue();
+
+    mvc.perform(
+            post("/inventory/reservations")
+                .with(serviceJwt())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "stockId":"%s",
+                      "quantity":30.0,
+                      "requestedBy":"order-service",
+                      "referenceId":"too-large"
+                    }
+                    """
+                        .formatted(stockId)))
+        .andExpect(status().isBadRequest());
+
+    mvc.perform(
+            post("/inventory/stocks/{stockId}/adjustments", stockId)
+                .with(serviceJwt())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "quantityDelta":-2.5,
+                      "reason":"shrinkage",
+                      "referenceId":"cycle-count-1"
+                    }
+                    """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.onHandQuantity").value(23.0))
+        .andExpect(jsonPath("$.availableQuantity").value(23.0));
+  }
+
+  @Test
   void shouldReturnNotFoundForMissingStock() throws Exception {
     mvc.perform(get("/inventory/stocks/{stockId}", UUID.randomUUID()).with(sellerJwt()))
         .andExpect(status().isNotFound());

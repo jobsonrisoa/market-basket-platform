@@ -64,9 +64,37 @@ class InventoryController {
     AuthenticatedSellerAccess.requireSellerAccess(authentication, stock.sellerId());
     InventoryReservationEntity reservation =
         inventory.reserve(
-            request.stockId(), request.quantity(), request.requestedBy(), request.referenceId());
+            request.stockId(),
+            request.quantity(),
+            request.requestedBy(),
+            request.referenceId(),
+            request.expiresAt());
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(InventoryReservationResponse.from(reservation));
+  }
+
+  @PostMapping("/reservations/release")
+  InventoryReservationResponse releaseByReference(
+      @Valid @RequestBody ReservationCommandRequest request, Authentication authentication) {
+    InventoryStockEntity stock = inventory.getStock(request.stockId());
+    AuthenticatedSellerAccess.requireSellerAccess(authentication, stock.sellerId());
+    return InventoryReservationResponse.from(
+        inventory.release(request.stockId(), request.requestedBy(), request.referenceId()));
+  }
+
+  @PostMapping("/reservations/commit")
+  InventoryReservationResponse commitByReference(
+      @Valid @RequestBody ReservationCommandRequest request, Authentication authentication) {
+    InventoryStockEntity stock = inventory.getStock(request.stockId());
+    AuthenticatedSellerAccess.requireSellerAccess(authentication, stock.sellerId());
+    return InventoryReservationResponse.from(
+        inventory.commit(request.stockId(), request.requestedBy(), request.referenceId()));
+  }
+
+  @PostMapping("/reservations/expire")
+  List<InventoryReservationResponse> expire(Authentication authentication) {
+    AuthenticatedSellerAccess.requireSystemAccess(authentication);
+    return inventory.expireReservations().stream().map(InventoryReservationResponse::from).toList();
   }
 
   @PostMapping("/reservations/{reservationId}/release")
@@ -75,6 +103,16 @@ class InventoryController {
     InventoryReservationEntity reservation = inventory.getReservation(reservationId);
     AuthenticatedSellerAccess.requireSellerAccess(authentication, reservation.sellerId());
     return InventoryReservationResponse.from(inventory.release(reservationId));
+  }
+
+  @PostMapping("/stocks/{stockId}/adjustments")
+  InventoryStockResponse adjustStock(
+      @PathVariable UUID stockId,
+      @Valid @RequestBody AdjustStockRequest request,
+      Authentication authentication) {
+    InventoryStockEntity stock = inventory.getStock(stockId);
+    AuthenticatedSellerAccess.requireSellerAccess(authentication, stock.sellerId());
+    return InventoryStockResponse.from(inventory.adjustStock(stockId, request.quantityDelta()));
   }
 
   record UpsertStockRequest(
@@ -87,7 +125,14 @@ class InventoryController {
       @NotNull UUID stockId,
       @NotNull @Positive BigDecimal quantity,
       @NotBlank String requestedBy,
-      @NotBlank String referenceId) {}
+      @NotBlank String referenceId,
+      Instant expiresAt) {}
+
+  record ReservationCommandRequest(
+      @NotNull UUID stockId, @NotBlank String requestedBy, @NotBlank String referenceId) {}
+
+  record AdjustStockRequest(
+      @NotNull BigDecimal quantityDelta, @NotBlank String reason, @NotBlank String referenceId) {}
 
   record InventoryStockResponse(
       UUID id,
@@ -124,7 +169,10 @@ class InventoryController {
       String referenceId,
       InventoryReservationStatus status,
       Instant createdAt,
-      Instant releasedAt) {
+      Instant releasedAt,
+      Instant expiresAt,
+      Instant expiredAt,
+      Instant committedAt) {
     static InventoryReservationResponse from(InventoryReservationEntity reservation) {
       return new InventoryReservationResponse(
           reservation.id(),
@@ -137,7 +185,10 @@ class InventoryController {
           reservation.referenceId(),
           reservation.status(),
           reservation.createdAt(),
-          reservation.releasedAt());
+          reservation.releasedAt(),
+          reservation.expiresAt(),
+          reservation.expiredAt(),
+          reservation.committedAt());
     }
   }
 }

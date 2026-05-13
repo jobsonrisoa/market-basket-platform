@@ -25,6 +25,34 @@ public record InventoryEvent(
         "inventory.reservation_released.v1", ReservationReleasedPayload.from(stock, reservation));
   }
 
+  public static InventoryEvent reservationExpired(
+      InventoryStockEntity stock, InventoryReservationEntity reservation) {
+    return event(
+        "inventory.reservation_expired.v1", ReservationExpiredPayload.from(stock, reservation));
+  }
+
+  public static InventoryEvent reservationCommitted(
+      InventoryStockEntity stock, InventoryReservationEntity reservation) {
+    return event(
+        "inventory.reservation_committed.v1", ReservationCommittedPayload.from(stock, reservation));
+  }
+
+  public static InventoryEvent stockAdjusted(
+      InventoryStockEntity stock, BigDecimal quantityDelta, String reason, String referenceId) {
+    return event(
+        "inventory.stock_adjusted.v1",
+        new StockAdjustedPayload(
+            stock.id().toString(),
+            stock.sellerId().toString(),
+            stock.productId().toString(),
+            quantityDelta,
+            stock.unit(),
+            stock.onHandQuantity(),
+            stock.availableQuantity(),
+            reason,
+            referenceId));
+  }
+
   private static InventoryEvent event(String eventType, Object payload) {
     return new InventoryEvent(
         UUID.randomUUID(), eventType, 1, Instant.now(), UUID.randomUUID().toString(), payload);
@@ -81,4 +109,71 @@ public record InventoryEvent(
           reservation.releasedAt());
     }
   }
+
+  public record ReservationExpiredPayload(
+      String stockId,
+      String reservationId,
+      String sellerId,
+      String productId,
+      BigDecimal quantity,
+      String unit,
+      BigDecimal availableQuantity,
+      String requestedBy,
+      String referenceId,
+      Instant expiredAt) {
+    static ReservationExpiredPayload from(
+        InventoryStockEntity stock, InventoryReservationEntity reservation) {
+      return new ReservationExpiredPayload(
+          stock.id().toString(),
+          reservation.id().toString(),
+          stock.sellerId().toString(),
+          stock.productId().toString(),
+          reservation.quantity(),
+          stock.unit(),
+          stock.availableQuantity(),
+          reservation.requestedBy(),
+          reservation.referenceId(),
+          reservation.expiredAt());
+    }
+  }
+
+  public record ReservationCommittedPayload(
+      String stockId,
+      String reservationId,
+      String sellerId,
+      String productId,
+      BigDecimal quantity,
+      String unit,
+      BigDecimal onHandQuantity,
+      BigDecimal availableQuantity,
+      String requestedBy,
+      String referenceId,
+      Instant committedAt) {
+    static ReservationCommittedPayload from(
+        InventoryStockEntity stock, InventoryReservationEntity reservation) {
+      return new ReservationCommittedPayload(
+          stock.id().toString(),
+          reservation.id().toString(),
+          stock.sellerId().toString(),
+          stock.productId().toString(),
+          reservation.quantity(),
+          stock.unit(),
+          stock.onHandQuantity(),
+          stock.availableQuantity(),
+          reservation.requestedBy(),
+          reservation.referenceId(),
+          reservation.committedAt());
+    }
+  }
+
+  public record StockAdjustedPayload(
+      String stockId,
+      String sellerId,
+      String productId,
+      BigDecimal quantityDelta,
+      String unit,
+      BigDecimal onHandQuantity,
+      BigDecimal availableQuantity,
+      String reason,
+      String referenceId) {}
 }
