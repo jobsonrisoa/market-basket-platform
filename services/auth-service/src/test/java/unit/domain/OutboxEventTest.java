@@ -72,31 +72,53 @@ class OutboxEventTest {
   void shouldRejectInvalidEventData() {
     UUID eventId = UUID.randomUUID();
     Instant occurredAt = Instant.parse("2026-05-08T12:00:00Z");
+    Map<String, Object> payload = Map.of("id", "1");
 
+    assertThrows(NullPointerException.class, () -> eventWithNullEventId(occurredAt, payload));
     assertThrows(
-        NullPointerException.class,
-        () -> new OutboxEvent(null, "id", "type", 1, occurredAt, "correlation", Map.of("id", "1")));
+        IllegalArgumentException.class, () -> eventWithBlankAggregateId(eventId, occurredAt, payload));
     assertThrows(
-        IllegalArgumentException.class,
-        () ->
-            new OutboxEvent(eventId, " ", "type", 1, occurredAt, "correlation", Map.of("id", "1")));
+        IllegalArgumentException.class, () -> eventWithBlankEventType(eventId, occurredAt, payload));
     assertThrows(
-        IllegalArgumentException.class,
-        () -> new OutboxEvent(eventId, "id", " ", 1, occurredAt, "correlation", Map.of("id", "1")));
+        IllegalArgumentException.class, () -> eventWithInvalidVersion(eventId, occurredAt, payload));
+    assertThrows(NullPointerException.class, () -> eventWithNullOccurredAt(eventId, payload));
     assertThrows(
-        IllegalArgumentException.class,
-        () ->
-            new OutboxEvent(
-                eventId, "id", "type", 0, occurredAt, "correlation", Map.of("id", "1")));
-    assertThrows(
-        NullPointerException.class,
-        () -> new OutboxEvent(eventId, "id", "type", 1, null, "correlation", Map.of("id", "1")));
+        IllegalArgumentException.class, () -> eventWithBlankCorrelationId(eventId, occurredAt, payload));
     assertThrows(
         IllegalArgumentException.class,
-        () -> new OutboxEvent(eventId, "id", "type", 1, occurredAt, " ", Map.of("id", "1")));
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> new OutboxEvent(eventId, "id", "type", 1, occurredAt, "correlation", Map.of()));
+        () -> eventWithEmptyPayload(eventId, occurredAt));
+  }
+
+  private OutboxEvent eventWithNullEventId(Instant occurredAt, Map<String, Object> payload) {
+    return new OutboxEvent(null, "id", "type", 1, occurredAt, "correlation", payload);
+  }
+
+  private OutboxEvent eventWithBlankAggregateId(
+      UUID eventId, Instant occurredAt, Map<String, Object> payload) {
+    return new OutboxEvent(eventId, " ", "type", 1, occurredAt, "correlation", payload);
+  }
+
+  private OutboxEvent eventWithBlankEventType(
+      UUID eventId, Instant occurredAt, Map<String, Object> payload) {
+    return new OutboxEvent(eventId, "id", " ", 1, occurredAt, "correlation", payload);
+  }
+
+  private OutboxEvent eventWithInvalidVersion(
+      UUID eventId, Instant occurredAt, Map<String, Object> payload) {
+    return new OutboxEvent(eventId, "id", "type", 0, occurredAt, "correlation", payload);
+  }
+
+  private OutboxEvent eventWithNullOccurredAt(UUID eventId, Map<String, Object> payload) {
+    return new OutboxEvent(eventId, "id", "type", 1, null, "correlation", payload);
+  }
+
+  private OutboxEvent eventWithBlankCorrelationId(
+      UUID eventId, Instant occurredAt, Map<String, Object> payload) {
+    return new OutboxEvent(eventId, "id", "type", 1, occurredAt, " ", payload);
+  }
+
+  private OutboxEvent eventWithEmptyPayload(UUID eventId, Instant occurredAt) {
+    return new OutboxEvent(eventId, "id", "type", 1, occurredAt, "correlation", Map.of());
   }
 
   private void assertEvent(OutboxEvent event, String eventType, String aggregateId) {

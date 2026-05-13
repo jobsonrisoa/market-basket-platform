@@ -28,12 +28,15 @@ class SellerStoreEntityTest {
 
   @Test
   void shouldRejectInvalidSellerStore() {
+    UUID ownerUserId = UUID.randomUUID();
+    Instant submittedAt = Instant.parse("2026-05-10T12:00:00Z");
+
     assertThrows(
         IllegalArgumentException.class,
-        () -> SellerStoreEntity.create(" ", UUID.randomUUID(), Instant.now()));
+        () -> SellerStoreEntity.create(" ", ownerUserId, submittedAt));
     assertThrows(
         IllegalArgumentException.class,
-        () -> SellerStoreEntity.create("Fresh Market", null, Instant.now()));
+        () -> SellerStoreEntity.create("Fresh Market", null, submittedAt));
   }
 
   @Test

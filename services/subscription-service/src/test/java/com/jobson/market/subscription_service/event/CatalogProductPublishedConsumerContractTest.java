@@ -62,7 +62,7 @@ class CatalogProductPublishedConsumerContractTest {
     UUID.fromString(requireText(payload, "categoryId"));
     assertEquals("PUBLISHED", requireText(payload, "status"));
     assertTrue(
-        new BigDecimal(payload.path("priceAmount").asText()).compareTo(BigDecimal.ZERO) >= 0);
+        new BigDecimal(payload.path("priceAmount").toString()).compareTo(BigDecimal.ZERO) >= 0);
     requireText(payload, "currency");
     requireText(payload, "unit");
     requireText(payload, "packageSize");

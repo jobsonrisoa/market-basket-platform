@@ -61,11 +61,11 @@ class KafkaOutboxPublisherIntegrationTest {
 
       publisher.publishPendingEvents();
 
-      ConsumerRecord<String, String> record = pollOne(consumer, event.eventType());
-      JsonNode envelope = objectMapper.readTree(record.value());
+      ConsumerRecord<String, String> consumedRecord = pollOne(consumer, event.eventType());
+      JsonNode envelope = objectMapper.readTree(consumedRecord.value());
 
-      assertEquals(event.eventType(), record.topic());
-      assertEquals(event.eventId().toString(), record.key());
+      assertEquals(event.eventType(), consumedRecord.topic());
+      assertEquals(event.eventId().toString(), consumedRecord.key());
       assertEquals(event.eventId().toString(), envelope.path("eventId").stringValue());
       assertEquals(event.eventType(), envelope.path("eventType").stringValue());
       assertEquals(user.id().toString(), envelope.at("/payload/userId").stringValue());

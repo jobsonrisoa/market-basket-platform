@@ -29,6 +29,7 @@ public record OutboxEvent(
   private static final String REFRESH_TOKEN_ROTATED = "auth.session.refresh_token_rotated.v1";
   private static final String REFRESH_TOKEN_REUSED = "auth.session.refresh_token_reused.v1";
   private static final String SESSION_REVOKED = "auth.session.revoked.v1";
+  private static final String USER_ID = "userId";
 
   public OutboxEvent {
     Objects.requireNonNull(eventId, "eventId is required");
@@ -110,7 +111,7 @@ public record OutboxEvent(
         Instant.now(),
         UUID.randomUUID().toString(),
         payload(
-            "userId",
+            USER_ID,
             user.id().toString(),
             "role",
             role.name(),
@@ -129,7 +130,7 @@ public record OutboxEvent(
         Instant.now(),
         UUID.randomUUID().toString(),
         payload(
-            "userId",
+            USER_ID,
             user.id().toString(),
             "status",
             user.status().name(),
@@ -182,11 +183,11 @@ public record OutboxEvent(
   }
 
   private static Map<String, Object> userEmailPayload(User user) {
-    return payload("userId", user.id().toString(), "email", user.email().value());
+    return payload(USER_ID, user.id().toString(), "email", user.email().value());
   }
 
   private static Map<String, Object> refreshTokenPayload(UUID userId, UUID familyId) {
-    return payload("userId", userId.toString(), "familyId", familyId.toString());
+    return payload(USER_ID, userId.toString(), "familyId", familyId.toString());
   }
 
   private static Map<String, Object> payload(Object... entries) {

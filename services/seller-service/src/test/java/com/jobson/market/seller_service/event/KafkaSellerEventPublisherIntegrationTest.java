@@ -47,10 +47,10 @@ class KafkaSellerEventPublisherIntegrationTest {
 
       publisher.publish(event);
 
-      ConsumerRecord<String, String> record = pollOne(consumer, event.eventType());
-      JsonNode envelope = objectMapper.readTree(record.value());
-      assertEquals(event.eventType(), record.topic());
-      assertEquals(event.eventId().toString(), record.key());
+      ConsumerRecord<String, String> consumedRecord = pollOne(consumer, event.eventType());
+      JsonNode envelope = objectMapper.readTree(consumedRecord.value());
+      assertEquals(event.eventType(), consumedRecord.topic());
+      assertEquals(event.eventId().toString(), consumedRecord.key());
       assertEquals(event.eventId().toString(), envelope.path("eventId").stringValue());
       assertEquals("seller.approved.v1", envelope.path("eventType").stringValue());
       assertEquals(seller.id().toString(), envelope.at("/payload/sellerId").stringValue());
@@ -73,10 +73,10 @@ class KafkaSellerEventPublisherIntegrationTest {
 
       publisher.publish(event);
 
-      ConsumerRecord<String, String> record = pollOne(consumer, event.eventType());
-      JsonNode envelope = objectMapper.readTree(record.value());
-      assertEquals(event.eventType(), record.topic());
-      assertEquals(event.eventId().toString(), record.key());
+      ConsumerRecord<String, String> consumedRecord = pollOne(consumer, event.eventType());
+      JsonNode envelope = objectMapper.readTree(consumedRecord.value());
+      assertEquals(event.eventType(), consumedRecord.topic());
+      assertEquals(event.eventId().toString(), consumedRecord.key());
       assertEquals(event.eventId().toString(), envelope.path("eventId").stringValue());
       assertEquals("seller.rejected.v1", envelope.path("eventType").stringValue());
       assertEquals(seller.id().toString(), envelope.at("/payload/sellerId").stringValue());

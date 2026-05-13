@@ -43,7 +43,7 @@ class NotificationConsumerContractTest {
     JsonNode payload = read(contract.example()).path("payload");
 
     assertThrows(
-        IllegalArgumentException.class, () -> requireText(payload, contract.missingField()));
+        IllegalArgumentException.class, () -> requireMissingField(payload, contract));
   }
 
   private static Stream<Contract> contracts() {
@@ -88,6 +88,10 @@ class NotificationConsumerContractTest {
       throw new IllegalArgumentException("Missing required field " + field);
     }
     return node.path(field).stringValue();
+  }
+
+  private static void requireMissingField(JsonNode payload, Contract contract) {
+    requireText(payload, contract.missingField());
   }
 
   private record Contract(
