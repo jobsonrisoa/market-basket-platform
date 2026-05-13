@@ -284,8 +284,8 @@ Request:
 
 Response: `200 OK`
 
-Marks the seller store as `APPROVED`. Seller-service also has a JSON Schema producer contract for
-`seller.approved.v1`; runtime Kafka publishing is deferred.
+Marks the seller store as `APPROVED`. Seller-service publishes `seller.approved.v1` to Kafka after
+the store is approved. Catalog-service consumes that event into its seller approval read model.
 The reviewer user is the authenticated JWT subject. `reviewerUserId` may still be accepted
 temporarily for backward compatibility but is ignored.
 
@@ -308,6 +308,9 @@ Request:
 Response: `200 OK`
 
 Marks the seller store as `REJECTED` with reviewer metadata from the authenticated JWT subject.
+Seller-service publishes `seller.rejected.v1` to Kafka after the store is rejected. Catalog-service
+consumes that event into its seller approval read model so future product publish attempts fail
+closed for the seller.
 
 ### Add Seller Member
 
@@ -426,7 +429,8 @@ Base URL in local Compose: `http://localhost:8082`
 
 Catalog browsing endpoints are public. Catalog management endpoints require `Authorization: Bearer <access-token>` with a seller or admin role.
 Product write endpoints also require platform admin role or an active seller membership claim for
-the target seller. Seller approval enforcement remains future scope.
+the target seller. Publishing a product additionally requires catalog-service to have an
+`APPROVED` seller approval state for the product seller from seller review events.
 
 Seller membership claims are expected in JWTs for seller-scoped catalog writes:
 
@@ -583,7 +587,11 @@ Authorization: Bearer <access-token>
 
 Response: `200 OK`
 
-Changes the product status to `PUBLISHED`. Catalog-service also has a JSON Schema producer contract for `catalog.product.published.v1`; runtime Kafka publishing is deferred.
+Changes the product status to `PUBLISHED` only when the seller approval read model says the product
+seller is `APPROVED`. If approval data is missing, pending, rejected, or otherwise not approved,
+the endpoint returns `409 Conflict` with `Seller must be approved before publishing products`.
+Catalog-service also has a JSON Schema producer contract for `catalog.product.published.v1`;
+runtime Kafka publishing is deferred.
 
 ### Unpublish Product
 

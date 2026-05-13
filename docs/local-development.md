@@ -130,6 +130,13 @@ Customer-service event variables:
 | --- | --- |
 | `AUTH_USER_REGISTERED_TOPIC` | `auth.user.registered.v1` |
 
+Catalog-service event variables:
+
+| Variable | Default |
+| --- | --- |
+| `SELLER_APPROVED_TOPIC` | `seller.approved.v1` |
+| `SELLER_REJECTED_TOPIC` | `seller.rejected.v1` |
+
 ## Database Bootstrap
 
 `infra/postgres/init.sql` creates one database per service:

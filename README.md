@@ -8,8 +8,8 @@ Market Basket Platform is a Spring Boot microservice system for a grocery subscr
 | --- | ---: | --- |
 | `auth-service` | 8080 | User registration, login, JWT access tokens, refresh-token rotation, logout, admin RBAC, Google OAuth2 entry points, JWKS publication, and auth outbox publishing. |
 | `customer-service` | 8081 | Service-owned customer profiles keyed by auth user id, self-service profile APIs, support/admin read APIs, and idempotent auth registration event consumption. |
-| `seller-service` | 8087 | Seller store creation, approval/rejection workflow, owner/staff memberships, JWT role gates, and seller event contracts. |
-| `catalog-service` | 8082 | Category and seller-owned product management with draft/published/unpublished lifecycle, public reads, JWT role gates, and catalog event contracts. |
+| `seller-service` | 8087 | Seller store creation, approval/rejection workflow, owner/staff memberships, JWT role gates, and runtime seller review event publishing. |
+| `catalog-service` | 8082 | Category and seller-owned product management with draft/published/unpublished lifecycle, seller approval publishing gates, public reads, JWT role gates, and catalog event contracts. |
 | `subscription-service` | 8083 | Subscription bounded context scaffold. |
 | `order-service` | 8084 | Order bounded context scaffold. |
 | `inventory-service` | 8085 | Seller stock upsert/list/read, active reservation/release workflow, JWT role gates, and inventory event contracts. |

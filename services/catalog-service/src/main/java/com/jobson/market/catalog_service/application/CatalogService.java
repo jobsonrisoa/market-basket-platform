@@ -4,8 +4,10 @@ import com.jobson.market.catalog_service.domain.CategoryEntity;
 import com.jobson.market.catalog_service.domain.ProductDetails;
 import com.jobson.market.catalog_service.domain.ProductEntity;
 import com.jobson.market.catalog_service.domain.ProductStatus;
+import com.jobson.market.catalog_service.domain.SellerApprovalStatus;
 import com.jobson.market.catalog_service.persistence.CategoryRepository;
 import com.jobson.market.catalog_service.persistence.ProductRepository;
+import com.jobson.market.catalog_service.persistence.SellerApprovalRepository;
 import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
@@ -17,11 +19,17 @@ public class CatalogService {
 
   private final CategoryRepository categories;
   private final ProductRepository products;
+  private final SellerApprovalRepository sellerApprovals;
   private final Clock clock;
 
-  public CatalogService(CategoryRepository categories, ProductRepository products, Clock clock) {
+  public CatalogService(
+      CategoryRepository categories,
+      ProductRepository products,
+      SellerApprovalRepository sellerApprovals,
+      Clock clock) {
     this.categories = categories;
     this.products = products;
+    this.sellerApprovals = sellerApprovals;
     this.clock = clock;
   }
 
@@ -78,6 +86,7 @@ public class CatalogService {
   public ProductEntity publishProduct(UUID productId) {
     ProductEntity product = requireProduct(productId);
     requireCategory(product.categoryId());
+    requireApprovedSeller(product.sellerId());
     product.publish(clock.instant());
     return products.save(product);
   }
@@ -97,5 +106,12 @@ public class CatalogService {
 
   private ProductEntity requireProduct(UUID productId) {
     return products.findById(productId).orElseThrow(() -> new ProductNotFoundException(productId));
+  }
+
+  private void requireApprovedSeller(UUID sellerId) {
+    sellerApprovals
+        .findBySellerId(sellerId)
+        .filter(state -> state.approvalStatus() == SellerApprovalStatus.APPROVED)
+        .orElseThrow(() -> new SellerNotApprovedException(sellerId));
   }
 }

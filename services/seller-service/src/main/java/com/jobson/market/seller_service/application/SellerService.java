@@ -4,6 +4,8 @@ import com.jobson.market.seller_service.domain.SellerMembershipEntity;
 import com.jobson.market.seller_service.domain.SellerMembershipRole;
 import com.jobson.market.seller_service.domain.SellerMembershipStatus;
 import com.jobson.market.seller_service.domain.SellerStoreEntity;
+import com.jobson.market.seller_service.event.SellerEvent;
+import com.jobson.market.seller_service.event.SellerEventPublisher;
 import com.jobson.market.seller_service.persistence.SellerMembershipRepository;
 import com.jobson.market.seller_service.persistence.SellerStoreRepository;
 import java.time.Clock;
@@ -19,12 +21,17 @@ public class SellerService {
   private final SellerStoreRepository stores;
   private final SellerMembershipRepository memberships;
   private final Clock clock;
+  private final SellerEventPublisher events;
 
   public SellerService(
-      SellerStoreRepository stores, SellerMembershipRepository memberships, Clock clock) {
+      SellerStoreRepository stores,
+      SellerMembershipRepository memberships,
+      Clock clock,
+      SellerEventPublisher events) {
     this.stores = stores;
     this.memberships = memberships;
     this.clock = clock;
+    this.events = events;
   }
 
   @Transactional
@@ -91,14 +98,18 @@ public class SellerService {
   public SellerStoreEntity approveStore(UUID sellerId, UUID reviewerUserId, String reviewNotes) {
     SellerStoreEntity store = requireStore(sellerId);
     store.approve(reviewerUserId, reviewNotes, clock.instant());
-    return stores.save(store);
+    SellerStoreEntity saved = stores.save(store);
+    events.publish(SellerEvent.sellerApproved(saved));
+    return saved;
   }
 
   @Transactional
   public SellerStoreEntity rejectStore(UUID sellerId, UUID reviewerUserId, String reviewNotes) {
     SellerStoreEntity store = requireStore(sellerId);
     store.reject(reviewerUserId, reviewNotes, clock.instant());
-    return stores.save(store);
+    SellerStoreEntity saved = stores.save(store);
+    events.publish(SellerEvent.sellerRejected(saved));
+    return saved;
   }
 
   private SellerStoreEntity requireStore(UUID sellerId) {

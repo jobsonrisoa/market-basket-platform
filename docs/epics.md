@@ -93,9 +93,11 @@ Implemented notes:
 
 ## Epic 3: Seller-Approved Catalog Publishing
 
+Status: implemented.
+
 Goal: prevent unapproved sellers from publishing products and make seller approval state available to catalog workflows.
 
-Current state: seller stores can be approved or rejected. Catalog products can be published, but seller approval enforcement and seller lookup are documented as future refinements. `seller.approved.v1` has a producer contract, and catalog has a first consumer contract test.
+Current state: seller stores can be approved or rejected. Seller-service publishes `seller.approved.v1` and `seller.rejected.v1` at runtime when platform review changes seller approval state. Catalog-service consumes those events into a service-owned seller approval read model and only allows products to publish when that local state is `APPROVED`.
 
 Primary services touched: `seller-service`, `catalog-service`.
 
@@ -125,6 +127,14 @@ Event/API/test expectations:
 - Preserve `seller.approved.v1` compatibility.
 - If runtime event publishing is added, test outbox/publish behavior or equivalent delivery path.
 - Add catalog integration tests around publish authorization and approval state.
+
+Implemented notes:
+
+- `catalog_seller_approvals` stores the catalog-side seller approval read model keyed by seller id.
+- `SellerApprovedConsumer` consumes `seller.approved.v1` and `seller.rejected.v1` idempotently and records the latest review state.
+- Catalog publishing fails closed with `409 Conflict` when seller approval state is missing, pending, rejected, or otherwise not `APPROVED`.
+- Seller approval and rejection publish review events through `KafkaSellerEventPublisher`.
+- Tests cover pending/missing approval, rejected approval state, approved publishing, recorded seller-approved and seller-rejected consumption, service-level event publication, and broker-level seller event publishing.
 
 ## Epic 4: Inventory Reservation Lifecycle
 
@@ -209,7 +219,7 @@ In-scope stories:
 
 - Add notification preference, template, notification intent, delivery attempt, and suppression tables owned by `notification-service`.
 - Add internal/admin APIs to inspect notification intents and delivery attempts.
-- Consume key events: `auth.user.registered.v1`, `seller.approved.v1`, `subscription.renewal_due.v1`, `order.confirmed.v1`, and `order.fulfillment_status_changed.v1`.
+- Consume key events: `auth.user.registered.v1`, seller review events, `subscription.renewal_due.v1`, `order.confirmed.v1`, and `order.fulfillment_status_changed.v1`.
 - Implement an email provider port with a local no-op or log-backed adapter for development.
 - Add idempotent event handling so duplicate Kafka deliveries do not create duplicate notification intents.
 

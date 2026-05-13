@@ -1,0 +1,15 @@
+{
+  "eventId": "e37b9d17-73b6-4ff2-9573-1e52933f96cb",
+  "eventType": "seller.rejected.v1",
+  "version": 1,
+  "occurredAt": "2026-05-10T14:00:00Z",
+  "correlationId": "seller-review-rejected-example",
+  "payload": {
+    "sellerId": "0eaf0c1e-090d-4e6b-90e0-d7c8de9d1f1a",
+    "name": "Fresh Market",
+    "ownerUserId": "7fd9b32c-c557-4ab9-9650-8f85122225f8",
+    "approvalStatus": "REJECTED",
+    "reviewedByUserId": "b4b2ee03-eef2-4e7e-a80f-136cbfc21aa8",
+    "reviewedAt": "2026-05-10T14:00:00Z"
+  }
+}

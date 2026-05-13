@@ -9,8 +9,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jobson.market.catalog_service.TestcontainersConfiguration;
+import com.jobson.market.catalog_service.domain.SellerApprovalState;
+import com.jobson.market.catalog_service.domain.SellerApprovalStatus;
 import com.jobson.market.catalog_service.persistence.CategoryRepository;
 import com.jobson.market.catalog_service.persistence.ProductRepository;
+import com.jobson.market.catalog_service.persistence.SellerApprovalRepository;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -36,11 +40,13 @@ class CatalogControllerIntegrationTest {
   @Autowired private MockMvc mvc;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private ProductRepository products;
+  @Autowired private SellerApprovalRepository sellerApprovals;
   @Autowired private CategoryRepository categories;
 
   @BeforeEach
   void cleanDatabase() {
     products.deleteAll();
+    sellerApprovals.deleteAll();
     categories.deleteAll();
   }
 
@@ -101,6 +107,7 @@ class CatalogControllerIntegrationTest {
 
     JsonNode product = objectMapper.readTree(productResult.getResponse().getContentAsString());
     String productId = product.path("id").stringValue();
+    approveSeller(sellerId);
 
     mvc.perform(get("/catalog/products/{productId}", productId))
         .andExpect(status().isOk())
@@ -183,6 +190,7 @@ class CatalogControllerIntegrationTest {
         createProduct(categoryId, sellerId, sellerJwtFor(sellerId, "ACTIVE"))
             .path("id")
             .stringValue();
+    approveSeller(sellerId);
 
     mvc.perform(
             post("/catalog/products")
@@ -199,6 +207,44 @@ class CatalogControllerIntegrationTest {
         .andExpect(status().isForbidden());
 
     mvc.perform(post("/catalog/products/{productId}/publish", productId).with(adminJwt()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("PUBLISHED"));
+  }
+
+  @Test
+  void shouldRequireApprovedSellerStateBeforePublishingProduct() throws Exception {
+    UUID sellerId = UUID.randomUUID();
+    String categoryId = createCategory();
+    String productId =
+        createProduct(categoryId, sellerId, sellerJwtFor(sellerId, "ACTIVE"))
+            .path("id")
+            .stringValue();
+
+    mvc.perform(
+            post("/catalog/products/{productId}/publish", productId)
+                .with(sellerJwtFor(sellerId, "ACTIVE")))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.error").value("Seller must be approved before publishing products"));
+
+    sellerApprovals.save(
+        SellerApprovalState.reviewed(
+            sellerId,
+            "Fresh Market",
+            SellerApprovalStatus.REJECTED,
+            UUID.randomUUID(),
+            Instant.parse("2026-05-10T13:00:00Z")));
+
+    mvc.perform(
+            post("/catalog/products/{productId}/publish", productId)
+                .with(sellerJwtFor(sellerId, "ACTIVE")))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.error").value("Seller must be approved before publishing products"));
+
+    approveSeller(sellerId);
+
+    mvc.perform(
+            post("/catalog/products/{productId}/publish", productId)
+                .with(sellerJwtFor(sellerId, "ACTIVE")))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("PUBLISHED"));
   }
@@ -253,6 +299,16 @@ class CatalogControllerIntegrationTest {
             .andExpect(status().isCreated())
             .andReturn();
     return objectMapper.readTree(result.getResponse().getContentAsString());
+  }
+
+  private void approveSeller(UUID sellerId) {
+    sellerApprovals.save(
+        SellerApprovalState.reviewed(
+            sellerId,
+            "Fresh Market",
+            SellerApprovalStatus.APPROVED,
+            UUID.randomUUID(),
+            Instant.parse("2026-05-10T13:00:00Z")));
   }
 
   private static String productJson(UUID sellerId, String categoryId, String name) {

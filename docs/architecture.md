@@ -32,8 +32,8 @@ The current implemented domain depth is concentrated in `auth-service`, with cus
 | --- | --- | --- |
 | `auth-service` | `market_auth` | Identity, credentials, access tokens, refresh tokens, OAuth2 login, JWKS, auth events. |
 | `customer-service` | `market_customer` | Service-owned customer profiles, self-service profile APIs, support/admin profile reads, and auth registration event consumption. |
-| `seller-service` | `market_seller` | Seller store profile, platform approval workflow, staff membership, and seller event contracts. |
-| `catalog-service` | `market_catalog` | Seller-owned categories, products, draft/published lifecycle, and catalog event contracts. |
+| `seller-service` | `market_seller` | Seller store profile, platform approval workflow, staff membership, and seller review event publishing. |
+| `catalog-service` | `market_catalog` | Seller-owned categories, products, seller approval read model, draft/published lifecycle, and catalog event contracts. |
 | `subscription-service` | `market_subscription` | Subscription plans and recurring customer relationships. |
 | `order-service` | `market_order` | Order placement and lifecycle. |
 | `inventory-service` | `market_inventory` | Seller stock, availability reservations, and inventory event contracts. |
@@ -94,6 +94,7 @@ Ownership authorization is enforced at the service boundary after JWT validation
 - Seller-service is the source of truth for seller memberships. Store reads require an active seller membership or platform admin role, while membership management requires an active seller `OWNER` membership or platform admin role.
 - Seller store creation and platform review operations use the JWT subject as the actor user id. Request-body actor ids are ignored when present for backward compatibility.
 - Catalog-service keeps public read endpoints open, but product writes require `ADMIN`/`SUPER_ADMIN` or an active `seller_memberships` JWT claim matching the product seller.
+- Catalog publishing additionally requires the catalog-side seller approval read model to contain `APPROVED` for the product seller. Missing, pending, rejected, or stale-not-approved state returns a deterministic conflict instead of publishing.
 - Inventory-service requires `ADMIN`, `SUPER_ADMIN`, `SERVICE`, or an active `seller_memberships` JWT claim matching the stock seller for stock and reservation access.
 - Downstream `seller_memberships` claims are a compatibility contract with auth-issued tokens; seller-service remains the authoritative membership store.
 
@@ -114,14 +115,14 @@ The auth service has an outbox persistence model and Kafka publisher. This allow
 - `auth.user.google_account_linked.v1`
 
 Event contracts should remain versioned. Consumers should be tolerant of additive fields.
-The first implemented event-governance mechanism is JSON Schema producer and consumer contract testing. `OutboxEvent` carries structured payload fields, the JPA adapter serializes payload JSON for the outbox table, and the auth outbox publisher serializes Kafka envelopes with Jackson. Customer-service has a runtime Kafka consumer for `auth.user.registered.v1` that creates profiles idempotently using the recorded auth example in contract tests. Seller-service has a producer contract for `seller.approved.v1`, catalog-service has a producer contract for `catalog.product.published.v1`, and inventory-service has producer contracts for `inventory.stock_reserved.v1` and `inventory.reservation_released.v1`. Catalog, subscription, order, and notification include first consumer contract tests using recorded examples. Seller/catalog/inventory outbox persistence and Kafka publishing remain deferred until consumers need those events at runtime. Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
+The first implemented event-governance mechanism is JSON Schema producer and consumer contract testing. `OutboxEvent` carries structured payload fields, the JPA adapter serializes payload JSON for the outbox table, and the auth outbox publisher serializes Kafka envelopes with Jackson. Customer-service has a runtime Kafka consumer for `auth.user.registered.v1` that creates profiles idempotently using the recorded auth example in contract tests. Seller-service publishes `seller.approved.v1` and `seller.rejected.v1` at runtime when platform review changes seller approval state, and catalog-service consumes those events idempotently into a seller approval read model used by product publishing. Catalog-service has a producer contract for `catalog.product.published.v1`, and inventory-service has producer contracts for `inventory.stock_reserved.v1` and `inventory.reservation_released.v1`. Subscription, order, and notification include first consumer contract tests using recorded examples. Catalog/inventory outbox persistence and Kafka publishing remain deferred until consumers need those events at runtime. Schema Registry remains deferred until shared consumer pressure justifies the extra infrastructure.
 
 ## Data Ownership
 
 Each service owns its database and should be the only writer to its own schema. Cross-service data sharing should happen through APIs or events, not direct database joins.
 
 Local Compose creates all service databases from `infra/postgres/init.sql`.
-Service-local Flyway migrations stored in each service's `src/main/resources/db/migration` directory now own schema creation and evolution. Auth, customer, seller, catalog, and inventory have real domain tables; subscription, order, and notification currently have placeholder `select 1` migrations. Hibernate validates mapped schemas instead of creating or updating production tables.
+Service-local Flyway migrations stored in each service's `src/main/resources/db/migration` directory now own schema creation and evolution. Auth, customer, seller, catalog, and inventory have real domain tables. Catalog owns a `catalog_seller_approvals` read model populated from seller review events so publishing can fail closed when approval data is missing or not approved. Subscription, order, and notification currently have placeholder `select 1` migrations. Hibernate validates mapped schemas instead of creating or updating production tables.
 CI validates every service migration set against a disposable PostgreSQL database through the Flyway Maven plugin. Deployments run pinned Flyway Compose runners before app rollout, and services still run startup migrations as a safety net.
 
 ## Deployment Architecture

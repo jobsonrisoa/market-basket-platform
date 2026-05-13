@@ -184,6 +184,7 @@ Centralized log aggregation is not configured yet. Prefer structured JSON logs b
 3. From the host, local tools should use `localhost:9092`.
 4. Check Kafka health with `docker compose ps kafka`.
 5. For customer profile creation from registrations, confirm `customer-service` can consume the `auth.user.registered.v1` topic or the configured `AUTH_USER_REGISTERED_TOPIC`.
+6. For catalog publishing eligibility, confirm `seller-service` can publish and `catalog-service` can consume `seller.approved.v1`/`seller.rejected.v1` or the configured `SELLER_APPROVED_TOPIC`/`SELLER_REJECTED_TOPIC`.
 
 ## Runbook: Missing Prometheus Target
 

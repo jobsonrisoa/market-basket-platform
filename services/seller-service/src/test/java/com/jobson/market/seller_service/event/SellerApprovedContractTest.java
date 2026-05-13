@@ -63,6 +63,47 @@ class SellerApprovedContractTest {
         SellerApprovalStatus.APPROVED.name(), envelope.at("/payload/approvalStatus").stringValue());
   }
 
+  @Test
+  void shouldSerializeSellerRejectedEnvelopeThatMatchesConsumerContract() throws Exception {
+    SellerStoreEntity seller =
+        SellerStoreEntity.create(
+            "Fresh Market", OWNER_USER_ID, Instant.parse("2026-05-10T12:00:00Z"));
+    seller.reject(REVIEWER_USER_ID, "Needs documents", Instant.parse("2026-05-10T14:00:00Z"));
+
+    SellerEvent event = SellerEvent.sellerRejected(seller);
+    JsonNode envelope = objectMapper.valueToTree(event);
+    JsonNode schema =
+        objectMapper.readTree(
+            getClass().getResourceAsStream("/contracts/seller/seller-rejected-v1.schema.json"));
+
+    assertEquals("seller.rejected.v1", event.eventType());
+    assertEquals(schema.path("title").stringValue(), envelope.path("eventType").stringValue());
+    assertEquals(
+        schema.at("/properties/eventType/const").stringValue(),
+        envelope.path("eventType").stringValue());
+    assertEquals(schema.at("/properties/version/const").asInt(), envelope.path("version").asInt());
+    assertObjectHasOnlyFields(
+        envelope, "eventId", "eventType", "version", "occurredAt", "correlationId", "payload");
+    assertObjectHasOnlyFields(
+        envelope.path("payload"),
+        "sellerId",
+        "name",
+        "ownerUserId",
+        "approvalStatus",
+        "reviewedByUserId",
+        "reviewedAt");
+    assertRequiredFieldsExist(envelope, schema.path("required"));
+    assertRequiredFieldsExist(envelope.path("payload"), schema.at("/properties/payload/required"));
+    UUID.fromString(envelope.path("eventId").stringValue());
+    assertFalse(envelope.path("correlationId").stringValue().isBlank());
+    assertEquals(seller.id().toString(), envelope.at("/payload/sellerId").stringValue());
+    assertEquals(OWNER_USER_ID.toString(), envelope.at("/payload/ownerUserId").stringValue());
+    assertEquals(
+        REVIEWER_USER_ID.toString(), envelope.at("/payload/reviewedByUserId").stringValue());
+    assertEquals(
+        SellerApprovalStatus.REJECTED.name(), envelope.at("/payload/approvalStatus").stringValue());
+  }
+
   private void assertObjectHasOnlyFields(JsonNode node, String... fields) {
     Set<String> allowed = Set.of(fields);
     node.propertyNames()

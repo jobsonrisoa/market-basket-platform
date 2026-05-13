@@ -214,6 +214,36 @@ sequenceDiagram
   end
 ```
 
+## Seller Approval Publishing Flow
+
+```mermaid
+sequenceDiagram
+  participant Admin
+  participant Seller as seller-service
+  participant Kafka
+  participant Catalog as catalog-service
+  participant CatalogDb as market_catalog
+  participant SellerUser as Seller User
+
+  Admin->>Seller: POST /sellers/{sellerId}/approve
+  Seller->>Seller: Mark seller APPROVED
+  Seller->>Kafka: seller.approved.v1
+  Kafka-->>Catalog: Deliver approval event
+  Catalog->>CatalogDb: Upsert catalog_seller_approvals
+  Admin->>Seller: POST /sellers/{sellerId}/reject
+  Seller->>Seller: Mark seller REJECTED
+  Seller->>Kafka: seller.rejected.v1
+  Kafka-->>Catalog: Deliver rejection event
+  Catalog->>CatalogDb: Upsert catalog_seller_approvals
+  SellerUser->>Catalog: POST /catalog/products/{productId}/publish
+  Catalog->>CatalogDb: Require seller approval state APPROVED
+  alt approved
+    Catalog-->>SellerUser: 200 OK, product PUBLISHED
+  else missing, pending, or rejected
+    Catalog-->>SellerUser: 409 Conflict
+  end
+```
+
 ## CI/CD Flow
 
 ```mermaid

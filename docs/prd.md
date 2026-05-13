@@ -56,7 +56,7 @@ The implemented foundation now covers authentication plus the first customer, se
 
 - Full customer address books, payment profiles, allergies, delivery preferences, and subscription preferences.
 - Product catalog search and read-model optimization.
-- Seller approval enforcement during catalog publishing.
+- Seller re-review and rejection event propagation after an already-approved seller changes state.
 - Subscription plan and renewal workflows.
 - Basket, checkout, and order lifecycle.
 - Inventory reservation expiry, commit, decrement, and adjustment workflows.
@@ -83,7 +83,9 @@ The implemented foundation now covers authentication plus the first customer, se
 | Customer | Allow support/admin roles to read customer profiles for operations. | Implemented for `SUPPORT_AGENT`, `ADMIN`, and `SUPER_ADMIN` in `customer-service`. |
 | Seller | Create seller stores and manage owner/staff memberships. | Implemented in `seller-service`. |
 | Seller | Approve or reject seller stores through platform review. | Implemented in `seller-service`. |
+| Seller | Publish seller approval events for downstream workflows. | Implemented for `seller.approved.v1` and `seller.rejected.v1` in `seller-service`. |
 | Catalog | Create categories and seller-owned products with draft, published, and unpublished lifecycle states. | Implemented in `catalog-service`. |
+| Catalog | Prevent catalog publishing for sellers that are not approved. | Implemented in `catalog-service` through a seller approval read model fed by seller review events; missing or non-approved state fails closed. |
 | Catalog | Define the first catalog product-published event contract. | Implemented as JSON Schema producer contract tests in `catalog-service`. |
 | Inventory | Manage seller stock and reservation availability groundwork. | Implemented in `inventory-service`. |
 | Inventory | Define stock reservation and release event contracts. | Implemented as JSON Schema producer contract tests in `inventory-service`. |
@@ -220,6 +222,7 @@ Implementation status:
 - A Testcontainers Kafka integration test proves pending outbox events are published with the expected topic, key, envelope, payload object, and published status.
 - Customer-service consumes `auth.user.registered.v1` at runtime and contract-tests the recorded auth registration example, including duplicate-event idempotency.
 - Seller, catalog, and inventory have JSON Schema producer contract tests plus recorded example payloads.
+- Seller-service publishes `seller.approved.v1` and `seller.rejected.v1` at runtime, and catalog-service consumes them idempotently into a seller approval read model.
 - Catalog, subscription, order, and notification include first consumer contract tests around seller-approved, product-published, inventory, and notification-relevant events.
 - Kafka, PostgreSQL, and Redis Testcontainers images are pinned in auth-service tests.
 - Schema Registry is intentionally deferred until multiple production consumers depend on shared topics or manual compatibility review becomes too expensive.
@@ -242,7 +245,7 @@ Specialist review brief:
 Repo-specific specialist concerns:
 
 - `KafkaOutboxPublisher` currently sends each event to a topic named exactly like the event type, for example `auth.user.registered.v1`. Decide before production whether to keep one-topic-per-event-type or move to domain topics such as `auth.events` with `eventType` inside the envelope.
-- Existing contract tests prove producer schemas, selected consumer examples, one auth broker publish path, and the customer-service registration consumer's idempotent profile creation. Most future runtime consumers still need idempotency coverage as they are implemented.
+- Existing contract tests prove producer schemas, selected consumer examples, auth and seller broker publish paths, customer registration consumer idempotency, and catalog seller approval consumer idempotency. Most future runtime consumers still need idempotency coverage as they are implemented.
 
 Concerns the specialist should explicitly evaluate:
 
@@ -286,7 +289,7 @@ Implementation status:
 - `auth-service` owns schema migrations for users, roles, OAuth accounts, refresh tokens, and outbox events.
 - `customer-service` owns schema migrations for customer profiles keyed by auth user id, including profile status, contact fields, locale, timestamps, and JSONB placeholders for future preferences.
 - `seller-service` owns schema migrations for seller stores, owner/staff memberships, and approval review state.
-- `catalog-service` owns schema migrations for categories and seller-owned products.
+- `catalog-service` owns schema migrations for categories, seller-owned products, and the seller approval read model used by publish enforcement.
 - `inventory-service` owns schema migrations for stock records and reservations.
 - Subscription, order, and notification currently have placeholder initial migrations so future domain migrations append cleanly without reintroducing Hibernate schema generation.
 
@@ -311,8 +314,8 @@ The previous platform-hardening roadmap candidates now have initial implementati
    - Implemented: first catalog event contract, `catalog.product.published.v1`.
 3. Seller Approval
    - Implemented: seller stores now start in `PENDING_REVIEW` and can be approved or rejected by platform review endpoints.
-   - Implemented: first seller event contract, `seller.approved.v1`.
-   - Remaining: enforce seller approval during catalog publishing once inter-service authorization and seller lookup are added.
+   - Implemented: runtime seller review publishing with `seller.approved.v1` and `seller.rejected.v1`.
+   - Implemented: catalog consumes seller review events into a read model and blocks publishing for missing or non-approved seller state.
 4. Inventory Foundation
    - Implemented: seller-managed stock records tied to catalog product ids.
    - Implemented: availability and reservation groundwork for order and subscription workflows.
@@ -376,6 +379,7 @@ Cross-service events to define first:
 | `auth.user.registered.v1` | `auth-service` | `customer-service`, `notification-service` |
 | `auth.user.role_assigned.v1` | `auth-service` | `customer-service`, audit/read models |
 | `seller.approved.v1` | `seller-service` | `catalog-service`, `notification-service` |
+| `seller.rejected.v1` | `seller-service` | `catalog-service`, `notification-service` |
 | `catalog.product.published.v1` | `catalog-service` | `subscription-service`, `order-service`, search/read models |
 | `inventory.stock_reserved.v1` | `inventory-service` | `order-service` |
 | `inventory.reservation_released.v1` | `inventory-service` | `order-service` |

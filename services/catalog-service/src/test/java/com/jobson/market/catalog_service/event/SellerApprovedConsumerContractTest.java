@@ -17,6 +17,9 @@ class SellerApprovedConsumerContractTest {
   private static final Path EXAMPLE =
       Path.of(
           "../seller-service/src/test/resources/contracts/seller/examples/seller-approved-v1.json");
+  private static final Path REJECTED_EXAMPLE =
+      Path.of(
+          "../seller-service/src/test/resources/contracts/seller/examples/seller-rejected-v1.json");
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -27,6 +30,15 @@ class SellerApprovedConsumerContractTest {
     assertEquals("seller.approved.v1", event.path("eventType").stringValue());
     assertEnvelope(event);
     assertPayload(event.path("payload"));
+  }
+
+  @Test
+  void shouldAcceptSellerRejectedExampleEvent() throws Exception {
+    JsonNode event = objectMapper.readTree(Files.readString(REJECTED_EXAMPLE));
+
+    assertEquals("seller.rejected.v1", event.path("eventType").stringValue());
+    assertEnvelope(event);
+    assertPayload(event.path("payload"), "REJECTED");
   }
 
   @Test
@@ -61,8 +73,12 @@ class SellerApprovedConsumerContractTest {
   }
 
   private void assertPayload(JsonNode payload) {
+    assertPayload(payload, "APPROVED");
+  }
+
+  private void assertPayload(JsonNode payload, String expectedStatus) {
     UUID.fromString(requireText(payload, "sellerId"));
-    assertEquals("APPROVED", requireText(payload, "approvalStatus"));
+    assertEquals(expectedStatus, requireText(payload, "approvalStatus"));
     UUID.fromString(requireText(payload, "ownerUserId"));
     UUID.fromString(requireText(payload, "reviewedByUserId"));
     requireText(payload, "reviewedAt");
