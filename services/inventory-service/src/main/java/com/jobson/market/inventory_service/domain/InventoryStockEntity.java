@@ -12,6 +12,8 @@ import java.util.UUID;
 @Table(name = "inventory_stocks")
 public class InventoryStockEntity {
 
+  private static final String UPDATED_TIMESTAMP_REQUIRED = "Updated timestamp is required";
+
   @Id private UUID id;
 
   @Column(nullable = false)
@@ -37,25 +39,6 @@ public class InventoryStockEntity {
 
   protected InventoryStockEntity() {}
 
-  private InventoryStockEntity(
-      UUID id,
-      UUID sellerId,
-      UUID productId,
-      BigDecimal onHandQuantity,
-      BigDecimal reservedQuantity,
-      String unit,
-      Instant createdAt,
-      Instant updatedAt) {
-    this.id = id;
-    this.sellerId = sellerId;
-    this.productId = productId;
-    this.onHandQuantity = onHandQuantity;
-    this.reservedQuantity = reservedQuantity;
-    this.unit = unit;
-    this.createdAt = createdAt;
-    this.updatedAt = updatedAt;
-  }
-
   public static InventoryStockEntity create(
       UUID sellerId, UUID productId, BigDecimal onHandQuantity, String unit, Instant now) {
     requireId(sellerId, "Seller id is required");
@@ -63,21 +46,22 @@ public class InventoryStockEntity {
     BigDecimal requiredQuantity = requireNonNegative(onHandQuantity, "On-hand quantity");
     String requiredUnit = requireText(unit, "Unit is required");
     requireTimestamp(now, "Created timestamp is required");
-    return new InventoryStockEntity(
-        UUID.randomUUID(),
-        sellerId,
-        productId,
-        requiredQuantity,
-        BigDecimal.ZERO,
-        requiredUnit,
-        now,
-        now);
+    InventoryStockEntity stock = new InventoryStockEntity();
+    stock.id = UUID.randomUUID();
+    stock.sellerId = sellerId;
+    stock.productId = productId;
+    stock.onHandQuantity = requiredQuantity;
+    stock.reservedQuantity = BigDecimal.ZERO;
+    stock.unit = requiredUnit;
+    stock.createdAt = now;
+    stock.updatedAt = now;
+    return stock;
   }
 
   public void replaceOnHand(BigDecimal onHandQuantity, String unit, Instant updatedAt) {
     BigDecimal requiredQuantity = requireNonNegative(onHandQuantity, "On-hand quantity");
     String requiredUnit = requireText(unit, "Unit is required");
-    requireTimestamp(updatedAt, "Updated timestamp is required");
+    requireTimestamp(updatedAt, UPDATED_TIMESTAMP_REQUIRED);
     if (requiredQuantity.compareTo(reservedQuantity) < 0) {
       throw new IllegalArgumentException("On-hand quantity cannot be below reserved quantity");
     }
@@ -88,7 +72,7 @@ public class InventoryStockEntity {
 
   public void reserve(BigDecimal quantity, Instant updatedAt) {
     BigDecimal requiredQuantity = requirePositive(quantity);
-    requireTimestamp(updatedAt, "Updated timestamp is required");
+    requireTimestamp(updatedAt, UPDATED_TIMESTAMP_REQUIRED);
     if (availableQuantity().compareTo(requiredQuantity) < 0) {
       throw new IllegalArgumentException("Insufficient available stock");
     }
@@ -98,7 +82,7 @@ public class InventoryStockEntity {
 
   public void release(BigDecimal quantity, Instant updatedAt) {
     BigDecimal requiredQuantity = requirePositive(quantity);
-    requireTimestamp(updatedAt, "Updated timestamp is required");
+    requireTimestamp(updatedAt, UPDATED_TIMESTAMP_REQUIRED);
     if (reservedQuantity.compareTo(requiredQuantity) < 0) {
       throw new IllegalArgumentException("Cannot release more than reserved quantity");
     }
@@ -108,7 +92,7 @@ public class InventoryStockEntity {
 
   public void commit(BigDecimal quantity, Instant updatedAt) {
     BigDecimal requiredQuantity = requirePositive(quantity);
-    requireTimestamp(updatedAt, "Updated timestamp is required");
+    requireTimestamp(updatedAt, UPDATED_TIMESTAMP_REQUIRED);
     if (reservedQuantity.compareTo(requiredQuantity) < 0) {
       throw new IllegalArgumentException("Cannot commit more than reserved quantity");
     }
@@ -121,7 +105,7 @@ public class InventoryStockEntity {
     if (quantityDelta == null || quantityDelta.compareTo(BigDecimal.ZERO) == 0) {
       throw new IllegalArgumentException("Adjustment quantity delta is required");
     }
-    requireTimestamp(updatedAt, "Updated timestamp is required");
+    requireTimestamp(updatedAt, UPDATED_TIMESTAMP_REQUIRED);
     BigDecimal adjusted = onHandQuantity.add(quantityDelta);
     if (adjusted.compareTo(BigDecimal.ZERO) < 0) {
       throw new IllegalArgumentException("On-hand quantity cannot be negative");

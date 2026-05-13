@@ -41,19 +41,19 @@ class InventoryStockEntityTest {
 
   @Test
   void shouldRejectInvalidQuantities() {
+    BigDecimal negativeQuantity = new BigDecimal("-1.00");
     assertThrows(
         IllegalArgumentException.class,
-        () ->
-            InventoryStockEntity.create(SELLER_ID, PRODUCT_ID, new BigDecimal("-1.00"), "kg", NOW));
+        () -> InventoryStockEntity.create(SELLER_ID, PRODUCT_ID, negativeQuantity, "kg", NOW));
 
     InventoryStockEntity stock =
         InventoryStockEntity.create(SELLER_ID, PRODUCT_ID, new BigDecimal("2.00"), "kg", NOW);
+    BigDecimal tooLargeQuantity = new BigDecimal("3.00");
+    BigDecimal unreleasableQuantity = new BigDecimal("1.00");
+    Instant updateTime = Instant.parse("2026-05-10T13:00:00Z");
 
+    assertThrows(IllegalArgumentException.class, () -> stock.reserve(tooLargeQuantity, updateTime));
     assertThrows(
-        IllegalArgumentException.class,
-        () -> stock.reserve(new BigDecimal("3.00"), Instant.parse("2026-05-10T13:00:00Z")));
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> stock.release(new BigDecimal("1.00"), Instant.parse("2026-05-10T13:00:00Z")));
+        IllegalArgumentException.class, () -> stock.release(unreleasableQuantity, updateTime));
   }
 }

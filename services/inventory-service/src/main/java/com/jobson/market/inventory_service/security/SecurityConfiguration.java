@@ -22,8 +22,8 @@ import org.springframework.security.web.SecurityFilterChain;
 class SecurityConfiguration {
 
   @Bean
-  @SuppressWarnings({"java:S112", "java:S4502"})
-  SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  @SuppressWarnings("java:S4502")
+  SecurityFilterChain securityFilterChain(HttpSecurity http) {
     http.csrf(csrf -> csrf.disable())
         .authorizeHttpRequests(
             requests ->

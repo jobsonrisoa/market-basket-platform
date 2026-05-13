@@ -91,9 +91,10 @@ class InventoryConsumerContractTest {
     UUID.fromString(requireText(payload, "reservationId"));
     UUID.fromString(requireText(payload, "sellerId"));
     UUID.fromString(requireText(payload, "productId"));
-    assertTrue(new BigDecimal(payload.path("quantity").asText()).compareTo(BigDecimal.ZERO) > 0);
+    assertTrue(new BigDecimal(payload.path("quantity").toString()).compareTo(BigDecimal.ZERO) > 0);
     assertTrue(
-        new BigDecimal(payload.path("availableQuantity").asText()).compareTo(BigDecimal.ZERO) >= 0);
+        new BigDecimal(payload.path("availableQuantity").toString()).compareTo(BigDecimal.ZERO)
+            >= 0);
     requireText(payload, "unit");
     requireText(payload, "requestedBy");
     requireText(payload, "referenceId");

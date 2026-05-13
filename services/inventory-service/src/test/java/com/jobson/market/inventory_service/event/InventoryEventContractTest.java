@@ -59,7 +59,8 @@ class InventoryEventContractTest {
     assertEquals(stock.id().toString(), envelope.at("/payload/stockId").stringValue());
     assertEquals(reservation.id().toString(), envelope.at("/payload/reservationId").stringValue());
     assertEquals(
-        new BigDecimal("6.50"), new BigDecimal(envelope.at("/payload/availableQuantity").asText()));
+        new BigDecimal("6.50"),
+        new BigDecimal(envelope.at("/payload/availableQuantity").toString()));
   }
 
   @Test
@@ -103,7 +104,7 @@ class InventoryEventContractTest {
         "releasedAt");
     assertEquals(
         new BigDecimal("10.00"),
-        new BigDecimal(envelope.at("/payload/availableQuantity").asText()));
+        new BigDecimal(envelope.at("/payload/availableQuantity").toString()));
   }
 
   @Test

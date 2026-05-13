@@ -71,12 +71,6 @@ public class InventoryService {
         .orElseGet(() -> createReservation(stockId, quantity, requestedBy, referenceId, expiresAt));
   }
 
-  @Transactional
-  public InventoryReservationEntity reserve(
-      UUID stockId, BigDecimal quantity, String requestedBy, String referenceId) {
-    return reserve(stockId, quantity, requestedBy, referenceId, null);
-  }
-
   private InventoryReservationEntity createReservation(
       UUID stockId,
       BigDecimal quantity,
@@ -94,10 +88,16 @@ public class InventoryService {
   @Transactional
   public InventoryReservationEntity release(UUID reservationId) {
     InventoryReservationEntity reservation = requireReservation(reservationId);
+    return releaseActiveReservation(reservation);
+  }
+
+  private InventoryReservationEntity releaseActiveReservation(
+      InventoryReservationEntity reservation) {
     if (reservation.status() == InventoryReservationStatus.ACTIVE) {
       InventoryStockEntity stock = requireStock(reservation.stockId());
-      reservation.release(clock.instant());
-      stock.release(reservation.quantity(), clock.instant());
+      Instant now = clock.instant();
+      reservation.release(now);
+      stock.release(reservation.quantity(), now);
       stocks.save(stock);
       return reservations.save(reservation);
     }
@@ -108,7 +108,7 @@ public class InventoryService {
   public InventoryReservationEntity release(UUID stockId, String requestedBy, String referenceId) {
     InventoryReservationEntity reservation =
         requireReservation(stockId, requestedBy.trim(), referenceId.trim());
-    return release(reservation.id());
+    return releaseActiveReservation(reservation);
   }
 
   @Transactional

@@ -15,7 +15,9 @@ final class AuthenticatedSellerAccess {
     if (hasAnyRole(authentication, "ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_SERVICE")) {
       return;
     }
-    Jwt jwt = (Jwt) authentication.getPrincipal();
+    if (!(authentication.getPrincipal() instanceof Jwt jwt)) {
+      throw new AccessDeniedException("JWT authentication required");
+    }
     List<Map<String, Object>> memberships = jwt.getClaim("seller_memberships");
     if (memberships == null) {
       throw new AccessDeniedException("Active seller membership required");

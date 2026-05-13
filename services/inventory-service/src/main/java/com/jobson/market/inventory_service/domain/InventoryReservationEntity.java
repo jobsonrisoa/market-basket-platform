@@ -54,31 +54,6 @@ public class InventoryReservationEntity {
 
   protected InventoryReservationEntity() {}
 
-  private InventoryReservationEntity(
-      UUID id,
-      UUID stockId,
-      UUID sellerId,
-      UUID productId,
-      BigDecimal quantity,
-      String unit,
-      String requestedBy,
-      String referenceId,
-      InventoryReservationStatus status,
-      Instant createdAt,
-      Instant expiresAt) {
-    this.id = id;
-    this.stockId = stockId;
-    this.sellerId = sellerId;
-    this.productId = productId;
-    this.quantity = quantity;
-    this.unit = unit;
-    this.requestedBy = requestedBy;
-    this.referenceId = referenceId;
-    this.status = status;
-    this.createdAt = createdAt;
-    this.expiresAt = expiresAt;
-  }
-
   public static InventoryReservationEntity active(
       InventoryStockEntity stock,
       BigDecimal quantity,
@@ -96,18 +71,19 @@ public class InventoryReservationEntity {
       throw new IllegalArgumentException("Created timestamp is required");
     }
     stock.reserve(requiredQuantity, createdAt);
-    return new InventoryReservationEntity(
-        UUID.randomUUID(),
-        stock.id(),
-        stock.sellerId(),
-        stock.productId(),
-        requiredQuantity,
-        stock.unit(),
-        requiredRequestedBy,
-        requiredReferenceId,
-        InventoryReservationStatus.ACTIVE,
-        createdAt,
-        expiresAt);
+    InventoryReservationEntity reservation = new InventoryReservationEntity();
+    reservation.id = UUID.randomUUID();
+    reservation.stockId = stock.id();
+    reservation.sellerId = stock.sellerId();
+    reservation.productId = stock.productId();
+    reservation.quantity = requiredQuantity;
+    reservation.unit = stock.unit();
+    reservation.requestedBy = requiredRequestedBy;
+    reservation.referenceId = requiredReferenceId;
+    reservation.status = InventoryReservationStatus.ACTIVE;
+    reservation.createdAt = createdAt;
+    reservation.expiresAt = expiresAt;
+    return reservation;
   }
 
   public static InventoryReservationEntity active(
